@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Konverter Faktur Pajak ke Accurate 5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <!-- Ikon SVG (dipakai ulang lewat <use href="#i-...">) -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L7 9m5-5l5 5M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-5-5m5 5l5-5M4 18v.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V18"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2.2M12 17h.01"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3l9.5 17h-19L12 3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 10v4m0 3h.01"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 11v6m0-9h.01"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-history" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 103-6.7L3 8m0-5v5h5M12 7v5l3 3"/></symbol>
+      <symbol id="i-sales" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7m0 0H9m8 0v8"/></symbol>
+      <symbol id="i-buy" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 7L7 17m0 0h8m-8 0V9"/></symbol>
+      <symbol id="i-ship" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 17l2 3h14l2-3M5 17V9h14v8M9 9V5h6v4"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" d="M8 11V8a4 4 0 018 0v3"/></symbol>
+    </svg>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">FP</div>
+          <div>
+            <div class="brand-title">Konverter Faktur Pajak</div>
+            <div class="brand-sub">Excel DJP → Jurnal Accurate 5 (XML)</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span id="serverStatus" class="status-pill" title="Status penyimpanan riwayat">
+            <span class="dot"></span><span class="label">Memeriksa…</span>
+          </span>
+          <button class="btn btn-ghost" id="helpButton" type="button">
+            <svg class="icon"><use href="#i-help" /></svg><span>Cara Pakai</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="steps">
+        <!-- LANGKAH 1 -->
+        <article class="card step" id="step1">
+          <header class="step-head">
+            <span class="step-num">1</span>
+            <div>
+              <h2>Pilih jenis faktur</h2>
+              <p class="muted">Sesuaikan dengan file Excel yang akan Anda ubah.</p>
+            </div>
+          </header>
+          <div class="mode-grid" id="modeGrid" role="radiogroup" aria-label="Jenis faktur"></div>
+        </article>
+
+        <!-- LANGKAH 2 -->
+        <article class="card step" id="step2">
+          <header class="step-head">
+            <span class="step-num">2</span>
+            <div>
+              <h2>Periode &amp; nomor jurnal</h2>
+              <p class="muted">Dipakai untuk membuat nomor bukti jurnal di Accurate.</p>
+            </div>
+          </header>
+          <div class="field-grid three">
+            <div class="field">
+              <label for="journalMonth">Bulan</label>
+              <select id="journalMonth"></select>
+            </div>
+            <div class="field">
+              <label for="journalYear">Tahun</label>
+              <select id="journalYear"></select>
+            </div>
+            <div class="field">
+              <label for="startIndex">Mulai dari nomor urut</label>
+              <input type="number" id="startIndex" min="1" step="1" value="1" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="jv-preview">
+            <span class="muted">Nomor jurnal pertama akan menjadi</span>
+            <code id="jvPreview">PENJ.25.01.001</code>
+            <button type="button" class="chip hidden" id="continueIndex"></button>
+          </div>
+        </article>
+
+        <!-- LANGKAH 3 -->
+        <article class="card step" id="step3">
+          <header class="step-head">
+            <span class="step-num">3</span>
+            <div>
+              <h2>Akun di Accurate</h2>
+              <p class="muted">
+                Isi dengan <strong>nomor akun</strong> yang ada di database Accurate Anda.
+                Klik saran di bawah kolom untuk mengisi otomatis. Isian akan diingat untuk lain kali.
+              </p>
+            </div>
+          </header>
+          <div id="accountFields" class="account-list"></div>
+          <div id="journalSchema" class="schema"></div>
+        </article>
+
+        <!-- LANGKAH 4 -->
+        <article class="card step" id="step4">
+          <header class="step-head">
+            <span class="step-num">4</span>
+            <div>
+              <h2>Unggah file Excel</h2>
+              <p class="muted">File hasil unduhan dari DJP/Coretax (.xlsx atau .xls).</p>
+            </div>
+          </header>
+
+          <label class="dropzone" id="dropzone" for="fileInput">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" />
+            <svg class="icon icon-xl"><use href="#i-upload" /></svg>
+            <span class="dz-title">Tarik &amp; lepas file di sini</span>
+            <span class="muted">atau <span class="link">klik untuk memilih file</span></span>
+          </label>
+
+          <div class="file-card hidden" id="fileCard">
+            <svg class="icon icon-lg"><use href="#i-file" /></svg>
+            <div class="file-meta">
+              <div class="file-name" id="fileName"></div>
+              <div class="muted small" id="fileInfo"></div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="changeFile">Ganti file</button>
+          </div>
+
+          <details class="columns-help" id="columnsHelp">
+            <summary>Kolom apa saja yang dibaca dari Excel?</summary>
+            <div id="columnsHelpBody"></div>
+          </details>
+
+          <div id="previewArea" class="hidden">
+            <div class="stats" id="stats"></div>
+            <div class="notice warn hidden" id="formatWarning"></div>
+            <div class="table-toolbar">
+              <div class="segmented" role="tablist" id="rowFilter">
+                <button type="button" data-filter="all" class="active">Semua</button>
+                <button type="button" data-filter="valid">Akan diproses</button>
+                <button type="button" data-filter="skip">Dilewati</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Faktur</th>
+                    <th id="partyHeader">Nama</th>
+                    <th class="num hide-sm">DPP</th>
+                    <th class="num hide-sm">PPN</th>
+                    <th class="num">Total</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="previewBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- SIDEBAR -->
+      <aside class="side">
+        <div class="card">
+          <h3 class="side-title">Ringkasan</h3>
+          <div class="side-mode" id="sideMode"></div>
+          <ul class="checklist" id="checklist"></ul>
+          <button class="btn btn-primary btn-block btn-lg" id="convertButton" type="button" disabled>
+            <svg class="icon"><use href="#i-file" /></svg>
+            <span>Buat File XML</span>
+          </button>
+          <p class="muted small center" id="convertHint">Lengkapi langkah di samping terlebih dahulu.</p>
+
+          <div class="result hidden" id="resultCard">
+            <div class="result-head">
+              <span class="result-icon"><svg class="icon"><use href="#i-check" /></svg></span>
+              <div>
+                <strong>File XML siap!</strong>
+                <div class="muted small" id="resultText"></div>
+              </div>
+            </div>
+            <a class="btn btn-success btn-block" id="downloadLink">
+              <svg class="icon"><use href="#i-download" /></svg><span>Unduh File XML</span>
+            </a>
+            <p class="muted small">
+              Selanjutnya buka <strong>Accurate 5</strong>, gunakan menu <em>Impor Transaksi</em>,
+              lalu pilih file yang baru diunduh.
+            </p>
+            <details class="xml-details">
+              <summary>Lihat isi XML (untuk pengecekan teknis)</summary>
+              <pre><code id="xmlOutput"></code></pre>
+            </details>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="history-head">
+            <h3 class="side-title">
+              <svg class="icon"><use href="#i-history" /></svg> Riwayat
+            </h3>
+            <span class="muted small" id="historyModeLabel"></span>
+          </div>
+          <ul class="history" id="historyList">
+            <li class="muted small">Memuat riwayat…</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="footer muted small">
+      Semua data diproses di browser Anda sendiri dan tidak dikirim ke server mana pun.
+      Riwayat hanya tersimpan di browser ini — akan hilang jika data browser dibersihkan.
+    </footer>
+
+    <!-- Dialog bantuan -->
+    <dialog class="modal" id="helpDialog">
+      <div class="modal-head">
+        <h2>Cara Pakai</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Tutup">
+          <svg class="icon"><use href="#i-x" /></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ol class="howto">
+          <li>
+            <strong>Pilih jenis faktur.</strong> <em>Keluaran</em> untuk penjualan Anda. <em>Masukan</em>
+            untuk pembelian: B1 (impor/PIB), B2 (pembelian dalam negeri, PPN dikreditkan), B3 (PPN tidak
+            dikreditkan).
+          </li>
+          <li>
+            <strong>Tentukan periode.</strong> Pilih bulan &amp; tahun jurnal. Nomor urut menentukan nomor bukti
+            pertama, misalnya <code>PENJ.25.10.001</code>. Jika sebelumnya sudah ada jurnal di bulan yang sama,
+            lanjutkan nomornya agar tidak bentrok.
+          </li>
+          <li>
+            <strong>Isi nomor akun.</strong> Gunakan nomor akun persis seperti di daftar akun (Chart of Accounts)
+            Accurate Anda.
+          </li>
+          <li>
+            <strong>Unggah file Excel</strong> dari DJP/Coretax. Periksa tabel pratinjau: baris berstatus
+            <em>Dilewati</em> tidak akan masuk ke jurnal beserta alasannya.
+          </li>
+          <li>
+            <strong>Klik "Buat File XML"</strong>, unduh filenya, lalu impor ke Accurate 5.
+          </li>
+        </ol>
+        <h3>Istilah</h3>
+        <dl class="glossary">
+          <dt>DPP</dt><dd>Dasar Pengenaan Pajak — nilai transaksi sebelum PPN.</dd>
+          <dt>PPN</dt><dd>Pajak Pertambahan Nilai atas transaksi.</dd>
+          <dt>Debit / Kredit</dt><dd>Sisi pencatatan jurnal. Total debit selalu sama dengan total kredit.</dd>
+          <dt>Riwayat</dt><dd>File XML yang pernah dibuat disimpan di browser ini saja. Di komputer atau browser lain riwayatnya berbeda, dan akan hilang jika data/cache browser dihapus. Simpan file XML penting di folder Anda.</dd>
+          <dt>Dilewati</dt><dd>Baris yang datanya tidak lengkap (mis. NPWP atau nomor faktur kosong) sehingga tidak dibuatkan jurnal.</dd>
+        </dl>
+      </div>
+    </dialog>
+
+    <!-- Dialog konfirmasi -->
+    <dialog class="modal modal-sm" id="confirmDialog">
+      <div class="modal-body">
+        <h3 id="confirmTitle">Hapus file?</h3>
+        <p class="muted" id="confirmText"></p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" value="cancel" data-close>Batal</button>
+          <button class="btn btn-danger" type="button" id="confirmOk">Hapus</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

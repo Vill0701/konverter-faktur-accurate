@@ -1,0 +1,4 @@
+# Data riwayat lama dari versi server (berisi data pajak) — jangan diunggah
+database_faktur.db
+*.db
+node_modules/
