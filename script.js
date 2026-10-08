@@ -141,6 +141,12 @@ const MODES = [
     parseNum: parseInt,
     descSep: "\n ",
     columns: purchaseColumns(true),
+    // Kode transaksi yang PPN-nya tidak benar-benar dibayar ke penjual:
+    // 07 = PPN tidak dipungut, 08 = PPN dibebaskan. Hutang/pembelian = harga jual saja.
+    ppnIgnoredCodes: ["07", "08"],
+    codeColumns: ["Kode Transaksi", "Kode Jenis Transaksi"],
+    schemaNote:
+      "Kode transaksi 07/08 (PPN tidak dipungut/dibebaskan): PPN diabaikan, pembelian & hutang = Harga Jual saja.",
     accounts: purchaseAccounts(false),
     lines(r, a, total) {
       return `
@@ -276,6 +282,19 @@ function pick(row, names) {
   return undefined;
 }
 
+// Kode transaksi faktur = 2 digit pertama nomor faktur
+// (mis. 08002500012345678 atau 080.000-25.12345678 -> "08").
+function transactionCode(mode, row, invoiceNo) {
+  const explicit = pick(row, mode.codeColumns || []);
+  const m = /\d{1,2}/.exec(String(explicit ?? ""));
+  if (m) return m[0].padStart(2, "0");
+  if (invoiceNo === undefined) return null;
+  let digits = String(invoiceNo).replace(/\D/g, "");
+  // Excel menyimpan nomor sebagai angka -> nol di depan hilang
+  if (typeof invoiceNo === "number" && digits.length === 16) digits = "0" + digits;
+  return digits.length >= 16 ? digits.slice(0, 2) : null;
+}
+
 function extractRecord(mode, row) {
   const c = mode.columns;
   const r = {
@@ -286,6 +305,13 @@ function extractRecord(mode, row) {
     dpp: mode.parseNum(pick(row, c.dpp)),
     ppn: mode.parseNum(pick(row, c.ppn)),
   };
+  if (mode.ppnIgnoredCodes) {
+    r.code = transactionCode(mode, row, r.invoiceNo);
+    if (mode.ppnIgnoredCodes.includes(r.code)) {
+      r.ppnIgnored = isNaN(r.ppn) ? 0 : r.ppn;
+      r.ppn = 0;
+    }
+  }
   const reasons = [];
   if (!r.invoiceNo) reasons.push("Nomor faktur kosong");
   if (!r.name) reasons.push(`Nama ${mode.party.toLowerCase()} kosong`);
@@ -644,10 +670,11 @@ function updateChipsAndSchema() {
     .map((a) => {
       const acc = values[a.key];
       const d = a.side === "debit";
+      const star = state.mode.schemaNote && a.amount.includes("PPN") ? "*" : "";
       return `<tr>
         <td>${d ? "" : "&emsp;&emsp;"}${acc ? `<strong>${esc(acc)}</strong>` : `<span class="muted">[belum diisi]</span>`} <span class="muted">${esc(a.label.replace("Akun ", ""))}</span></td>
-        <td class="amt d">${d ? esc(a.amount) : ""}</td>
-        <td class="amt c">${d ? "" : esc(a.amount)}</td>
+        <td class="amt d">${d ? esc(a.amount) + star : ""}</td>
+        <td class="amt c">${d ? "" : esc(a.amount) + star}</td>
       </tr>`;
     })
     .join("");
@@ -656,7 +683,8 @@ function updateChipsAndSchema() {
     <table>
       <tr><td class="muted small">Akun</td><td class="amt muted small">Debit</td><td class="amt muted small">Kredit</td></tr>
       ${rows}
-    </table>`;
+    </table>
+    ${state.mode.schemaNote ? `<div class="schema-note">* ${esc(state.mode.schemaNote)}</div>` : ""}`;
 }
 
 // =================================================================
@@ -776,10 +804,16 @@ function renderFile() {
     rows.push(`
       <tr class="${r.valid ? "" : "skip"}">
         <td class="muted">${i + 2}</td>
-        <td class="name">${esc(r.invoiceNo ?? "–")}<div class="npwp">${displayDate(r.date)}</div></td>
+        <td class="inv">${esc(r.invoiceNo ?? "–")}<div class="npwp">${
+          r.code ? `<span class="code-tag">Kode ${esc(r.code)}</span> ` : ""
+        }${displayDate(r.date)}</div></td>
         <td class="name">${esc(r.name ?? "–")}<div class="npwp">${esc(r.npwp ?? "")}</div></td>
         <td class="num hide-sm">${fmtNum(r.dpp)}</td>
-        <td class="num hide-sm">${fmtNum(r.ppn)}</td>
+        <td class="num hide-sm">${
+          r.ppnIgnored !== undefined
+            ? `0<div class="ignored" title="PPN tidak dihitung karena kode ${esc(r.code)}">${fmtNum(r.ppnIgnored)}</div>`
+            : fmtNum(r.ppn)
+        }</td>
         <td class="num"><strong>${fmtNum(r.total)}</strong></td>
         <td>${
           r.valid
