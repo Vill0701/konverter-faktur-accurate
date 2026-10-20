@@ -366,6 +366,68 @@ input:disabled {
   border-radius: 6px;
 }
 
+/* ---------- Periode dari Masa Pajak ---------- */
+.notice.info {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.notice.ok {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.notice.period-source {
+  margin: 0 0 12px;
+}
+.period-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.period-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) 150px minmax(0, 1.4fr);
+  gap: 10px 16px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.period-name strong {
+  display: block;
+  font-size: 15px;
+}
+.period-start label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.period-start input {
+  padding: 7px 10px;
+}
+.period-jv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.period-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.period-range code {
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-soft);
+  padding: 3px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
 /* ---------- Accounts ---------- */
 .account-list {
   display: flex;
@@ -1169,6 +1231,12 @@ input:disabled {
   .mode-grid,
   .account {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .period-row {
+    grid-template-columns: minmax(0, 1fr) 130px;
+  }
+  .period-jv {
+    grid-column: 1 / -1;
   }
   .field-grid.three {
     grid-template-columns: 1fr 1fr;

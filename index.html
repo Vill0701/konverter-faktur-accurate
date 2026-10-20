@@ -72,27 +72,42 @@
             <span class="step-num">2</span>
             <div>
               <h2>Periode &amp; nomor jurnal</h2>
-              <p class="muted">Dipakai untuk membuat nomor bukti jurnal di Accurate.</p>
+              <p class="muted">
+                Bulan &amp; tahun diambil otomatis dari kolom <strong>Masa Pajak</strong> di file Excel.
+                Anda cukup menentukan nomor urut awal.
+              </p>
             </div>
           </header>
-          <div class="field-grid three">
-            <div class="field">
-              <label for="journalMonth">Bulan</label>
-              <select id="journalMonth"></select>
+          <!-- Tanpa kolom Masa Pajak: bulan & tahun dipilih manual -->
+          <div id="periodManual">
+            <div class="field-grid three">
+              <div class="field">
+                <label for="journalMonth">Bulan</label>
+                <select id="journalMonth"></select>
+              </div>
+              <div class="field">
+                <label for="journalYear">Tahun</label>
+                <select id="journalYear"></select>
+              </div>
+              <div class="field">
+                <label for="startIndex">Mulai dari nomor urut</label>
+                <input type="number" id="startIndex" min="1" step="1" value="1" inputmode="numeric" />
+              </div>
             </div>
-            <div class="field">
-              <label for="journalYear">Tahun</label>
-              <select id="journalYear"></select>
+            <div class="jv-preview">
+              <span class="muted">Nomor jurnal pertama akan menjadi</span>
+              <code id="jvPreview">PENJ.25.01.001</code>
+              <button type="button" class="chip hidden" id="continueIndex"></button>
             </div>
-            <div class="field">
-              <label for="startIndex">Mulai dari nomor urut</label>
-              <input type="number" id="startIndex" min="1" step="1" value="1" inputmode="numeric" />
-            </div>
+            <div class="notice info" id="periodNote"></div>
           </div>
-          <div class="jv-preview">
-            <span class="muted">Nomor jurnal pertama akan menjadi</span>
-            <code id="jvPreview">PENJ.25.01.001</code>
-            <button type="button" class="chip hidden" id="continueIndex"></button>
+          <!-- Dengan kolom Masa Pajak: satu baris per masa pajak di file -->
+          <div id="periodAuto" class="hidden">
+            <div class="notice ok period-source">
+              <svg class="icon"><use href="#i-check" /></svg>
+              <div class="notice-body" id="periodSource"></div>
+            </div>
+            <div class="period-list" id="periodList"></div>
           </div>
         </article>
 
@@ -237,14 +252,15 @@
       <div class="modal-body">
         <ol class="howto">
           <li>
-            <strong>Pilih jenis faktur.</strong> <em>Keluaran</em> untuk penjualan Anda. <em>Masukan</em>
+            <strong>Pilih jenis faktur.</strong> <em>Keluaran A2</em> untuk penjualan Anda. <em>Masukan</em>
             untuk pembelian: B1 (impor/PIB), B2 (pembelian dalam negeri, PPN dikreditkan), B3 (PPN tidak
             dikreditkan).
           </li>
           <li>
-            <strong>Tentukan periode.</strong> Pilih bulan &amp; tahun jurnal. Nomor urut menentukan nomor bukti
-            pertama, misalnya <code>PENJ.25.10.001</code>. Jika sebelumnya sudah ada jurnal di bulan yang sama,
-            lanjutkan nomornya agar tidak bentrok.
+            <strong>Tentukan nomor urut.</strong> Bulan &amp; tahun jurnal diambil otomatis dari kolom
+            <em>Masa Pajak</em>, misalnya Masa Pajak Januari 2026 menjadi <code>PENJ.26.01.001</code>. Anda cukup
+            mengisi nomor urut awal. Jika sebelumnya sudah ada jurnal di bulan yang sama, lanjutkan nomornya agar
+            tidak bentrok. File tanpa kolom Masa Pajak tetap bisa dipakai dengan memilih bulan &amp; tahun sendiri.
           </li>
           <li>
             <strong>Isi nomor akun.</strong> Gunakan nomor akun persis seperti di daftar akun (Chart of Accounts)

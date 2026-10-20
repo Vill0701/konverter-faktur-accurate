@@ -12,17 +12,38 @@ const MONTHS = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
+// Nama bulan yang dikenali saat membaca Masa Pajak (Indonesia & Inggris)
+const MONTH_ALIASES = [
+  ["januari", "january"],
+  ["februari", "pebruari", "february"],
+  ["maret", "march"],
+  ["april"],
+  ["mei", "may"],
+  ["juni", "june"],
+  ["juli", "july"],
+  ["agustus", "agt", "ags", "august"],
+  ["september"],
+  ["oktober", "october"],
+  ["november", "nopember"],
+  ["desember", "december"],
+];
+
+// Kolom Masa Pajak (mis. "Januari 2026") menentukan YY.MM pada nomor jurnal.
+const PERIOD_COLUMNS = ["Masa Pajak"];
+const TAX_YEAR_COLUMNS = ["Tahun Pajak"];
+
 // -----------------------------------------------------------------
 // KONFIGURASI JENIS FAKTUR
 // `columns` berisi nama-nama kolom Excel yang dicoba berurutan
-// (kolom pertama yang ada isinya yang dipakai).
+// (kolom pertama yang ada isinya yang dipakai). Nama pertama adalah
+// format lampiran SPT Masa PPN Coretax; sisanya format lama.
 // -----------------------------------------------------------------
 const MODES = [
   {
     id: "keluaran",
     category: "sales",
     icon: "i-sales",
-    title: "Faktur Pajak Keluaran",
+    title: "Faktur Pajak Keluaran A2",
     tag: "Penjualan",
     desc: "Faktur yang Anda terbitkan saat menjual barang/jasa ke pembeli.",
     prefix: "PENJ",
@@ -30,11 +51,19 @@ const MODES = [
     parseNum: parseFloat,
     descSep: " - ",
     columns: {
-      invoiceNo: ["Nomor Faktur Pajak", "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Nomor"],
-      date: ["Tanggal Faktur Pajak", "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Tanggal"],
+      invoiceNo: [
+        "Nomor Faktur/Dokumen",
+        "Nomor Faktur Pajak",
+        "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Nomor",
+      ],
+      date: [
+        "Tanggal Faktur/Dokumen",
+        "Tanggal Faktur Pajak",
+        "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Tanggal",
+      ],
       name: ["Nama Pembeli", "Nama Pembeli BKP/Penerima Manfaat BKP Tidak Berwujud/Penerima JKP"],
-      npwp: ["NPWP Pembeli / Identitas lainnya", "NPWP/NIK/Nomor Paspor"],
-      dpp: ["Harga Jual/Penggantian/DPP", "Harga Jual/Penggantian/DPP (Rupiah)"],
+      npwp: ["NPWP/NIK Pembeli", "NPWP Pembeli / Identitas lainnya", "NPWP/NIK/Nomor Paspor"],
+      dpp: ["Harga Jual / Penggantian / DPP", "Harga Jual/Penggantian/DPP (Rupiah)"],
       ppn: ["PPN", "PPN (Rupiah)"],
     },
     accounts: [
@@ -104,11 +133,11 @@ const MODES = [
     parseNum: parseFloat,
     descSep: "\n ",
     columns: {
-      invoiceNo: ["Nomor Dokumen"],
-      date: ["Tanggal Dokumen"],
+      invoiceNo: ["Nomor Faktur/Dokumen", "Nomor Dokumen"],
+      date: ["Tanggal Faktur/Dokumen", "Tanggal Dokumen"],
       name: ["Nama Penjual"],
-      npwp: ["NPWP Penjual"],
-      dpp: ["DPP / Penghasilan Kotor"],
+      npwp: ["NPWP/NIK Penjual", "NPWP Penjual"],
+      dpp: ["Harga Jual / Penggantian / DPP", "DPP / Penghasilan Kotor"],
       ppn: ["PPN"],
     },
     accounts: purchaseAccounts(true),
@@ -178,15 +207,17 @@ const MODES = [
 ];
 
 function purchaseColumns(withImportDpp) {
-  const dpp = ["Harga Jual/Penggantian/DPP", "Harga Jual/Penggantian/DPP (Rupiah)", "DPP (Rupiah)"];
+  const dpp = ["Harga Jual / Penggantian / DPP", "Harga Jual/Penggantian/DPP (Rupiah)", "DPP (Rupiah)"];
   if (withImportDpp) dpp.push("Harga Jual/Penggantian/Nilai Impor/DPP (Rupiah)");
   return {
     invoiceNo: [
+      "Nomor Faktur/Dokumen",
       "Nomor Faktur Pajak",
       "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Nomor",
       "Dokumen Tertentu - Nomor",
     ],
     date: [
+      "Tanggal Faktur/Dokumen",
       "Tanggal Faktur Pajak",
       "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Tanggal",
       "Dokumen Tertentu - Tanggal",
@@ -196,7 +227,7 @@ function purchaseColumns(withImportDpp) {
       "Nama Penjual Barang Kena Pajak/Barang Kena Pajak Tidak Berwujud/Jasa Kena Pajak",
       "Nama Penjual BKP/BKP Tidak Berwujud/Pemberi JKP",
     ],
-    npwp: ["Nomor Identitas WP", "NPWP Penjual", "NPWP"],
+    npwp: ["NPWP/NIK Penjual", "Nomor Identitas WP", "NPWP Penjual", "NPWP"],
     dpp,
     ppn: ["PPN", "PPN (Rupiah)"],
   };
@@ -275,11 +306,84 @@ function purchaseLines(r, a, total) {
 // =================================================================
 // LOGIKA KONVERSI
 // =================================================================
+// Judul kolom dibandingkan tanpa spasi/tanda baca & huruf besar-kecil,
+// jadi "Harga Jual / Penggantian / DPP" = "Harga Jual/Penggantian/DPP".
+const normKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+function normalizeRow(row) {
+  const out = {};
+  for (const [k, v] of Object.entries(row)) {
+    const nk = normKey(k);
+    if (!(nk in out)) out[nk] = v;
+  }
+  Object.defineProperty(out, "__rowNum__", { value: row.__rowNum__ });
+  return out;
+}
+
+// Baris judul kolom = baris pertama (dari 20 teratas) yang memuat minimal
+// dua nama kolom yang dikenal, untuk berjaga-jaga jika ada judul laporan
+// di atas tabel. File Coretax biasanya langsung di baris 1.
+function readRows(worksheet) {
+  if (!worksheet || !worksheet["!ref"]) return [];
+  const known = new Set(
+    [...MODES.flatMap((m) => Object.values(m.columns).flat()), ...PERIOD_COLUMNS].map(normKey)
+  );
+  const top = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: true }).slice(0, 20);
+  const headerAt = top.findIndex((cells) => (cells || []).filter((c) => known.has(normKey(c))).length >= 2);
+  const firstRow = XLSX.utils.decode_range(worksheet["!ref"]).s.r;
+  return XLSX.utils.sheet_to_json(worksheet, { range: firstRow + Math.max(headerAt, 0) }).map(normalizeRow);
+}
+
 function pick(row, names) {
   for (const n of names) {
-    if (row[n] !== undefined && row[n] !== null) return row[n];
+    const v = row[normKey(n)];
+    if (v !== undefined && v !== null && v !== "") return v;
   }
   return undefined;
+}
+
+// Masa Pajak -> kunci periode "YYMM", mis. "Januari 2026" -> "2601".
+// Juga dikenali: "01/2026", "2026-01", "012026", tanggal Excel, atau
+// angka bulan 1–12 dengan tahun dari kolom Tahun Pajak.
+function parseMasaPajak(value, taxYear) {
+  if (value === undefined) return null;
+  let month = null;
+  let year = null;
+  let m;
+  if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 12) {
+    month = value;
+  } else {
+    const s = String(value).trim().toLowerCase();
+    const words = s.match(/[a-z]+/g) || [];
+    const named = MONTH_ALIASES.findIndex((names) =>
+      words.some((w) => w.length >= 3 && names.some((n) => n.startsWith(w)))
+    );
+    if (named >= 0) {
+      month = named + 1;
+      m = /(?:^|\D)(20\d{2})(?!\d)/.exec(s);
+      year = m && Number(m[1]);
+    } else if ((m = /^(\d{1,2})\s*[-/.\s]\s*(20\d{2})$/.exec(s))) {
+      [month, year] = [Number(m[1]), Number(m[2])];
+    } else if ((m = /^(20\d{2})\s*[-/.\s]\s*(\d{1,2})$/.exec(s))) {
+      [year, month] = [Number(m[1]), Number(m[2])];
+    } else if ((m = /^(\d{1,2})(20\d{2})$/.exec(s))) {
+      [month, year] = [Number(m[1]), Number(m[2])];
+    } else if (/^\d{1,2}$/.test(s)) {
+      month = Number(s);
+    } else if ((m = /^(\d{4})-(\d{2})-\d{2}$/.exec(formatDate(value)))) {
+      [year, month] = [Number(m[1]), Number(m[2])];
+    }
+  }
+  if (!year && taxYear !== undefined) {
+    m = /(20\d{2})/.exec(String(taxYear));
+    year = m && Number(m[1]);
+  }
+  if (!(month >= 1 && month <= 12 && year >= 2000 && year <= 2099)) return null;
+  return String(year).slice(2) + String(month).padStart(2, "0");
+}
+
+function readPeriod(row) {
+  return parseMasaPajak(pick(row, PERIOD_COLUMNS), pick(row, TAX_YEAR_COLUMNS));
 }
 
 // Kode transaksi faktur = 2 digit pertama nomor faktur
@@ -298,12 +402,14 @@ function transactionCode(mode, row, invoiceNo) {
 function extractRecord(mode, row) {
   const c = mode.columns;
   const r = {
+    rowNum: row.__rowNum__ + 1,
     invoiceNo: pick(row, c.invoiceNo),
     rawDate: pick(row, c.date),
     name: pick(row, c.name),
     npwp: pick(row, c.npwp),
     dpp: mode.parseNum(pick(row, c.dpp)),
     ppn: mode.parseNum(pick(row, c.ppn)),
+    period: readPeriod(row),
   };
   if (mode.ppnIgnoredCodes) {
     r.code = transactionCode(mode, row, r.invoiceNo);
@@ -312,56 +418,62 @@ function extractRecord(mode, row) {
       r.ppn = 0;
     }
   }
+  r.date = formatDate(r.rawDate);
   const reasons = [];
   if (!r.invoiceNo) reasons.push("Nomor faktur kosong");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(r.date ?? ""))) reasons.push("Tanggal kosong/tidak dikenali");
+  if (state.autoPeriod && !r.period) reasons.push("Masa Pajak kosong/tidak dikenali");
   if (!r.name) reasons.push(`Nama ${mode.party.toLowerCase()} kosong`);
-  if (!r.npwp) reasons.push("NPWP kosong");
+  if (r.npwp === undefined) reasons.push("NPWP kosong");
   if (isNaN(r.dpp)) reasons.push("DPP kosong/bukan angka");
   if (isNaN(r.ppn)) reasons.push("PPN kosong/bukan angka");
   r.valid = reasons.length === 0;
   r.reasons = reasons;
   r.total = r.valid ? r.dpp + r.ppn : NaN;
-  r.date = formatDate(r.rawDate);
   return r;
 }
 
-function jvNumber(mode, year, month, index) {
-  return `${mode.prefix}.${year}.${month}.${String(index).padStart(3, "0")}`;
+// `key` = periode "YYMM", mis. jvNumber(mode, "2601", 1) -> "PENJ.26.01.001"
+function jvNumber(mode, key, index) {
+  return `${mode.prefix}.${key.slice(0, 2)}.${key.slice(2)}.${String(index).padStart(3, "0")}`;
 }
 
-function buildXml(mode, records, accounts, year, month, startIndex) {
+// `jvs` = nomor jurnal per baris, sejajar dengan `records`
+function buildXml(mode, records, accounts, jvs) {
   let transactions = "";
-  let indexNum = startIndex;
   let requestId = 1;
 
-  for (const r of records) {
-    if (!r.valid) continue;
+  records.forEach((rec, i) => {
+    if (!rec.valid) return;
+    // Teks dari Excel di-escape agar nama seperti "CV. MAJU & JAYA" tidak merusak XML
+    const r = { ...rec, name: esc(rec.name), npwp: esc(rec.npwp), invoiceNo: esc(rec.invoiceNo) };
     const total = r.dpp + r.ppn;
     transactions += `
         <JV operation="Add" REQUESTID="${requestId}">
             <TRANSACTIONID>148</TRANSACTIONID>
             ${mode.lines(r, accounts, total)}
-            <JVNUMBER>${jvNumber(mode, year, month, indexNum)}</JVNUMBER>
+            <JVNUMBER>${jvs[i]}</JVNUMBER>
             <TRANSDATE>${r.date}</TRANSDATE>
             <SOURCE>GL</SOURCE>
             <TRANSTYPE>journal voucher</TRANSTYPE>
             <TRANSDESCRIPTION>${r.name}${mode.descSep}${r.npwp}${mode.descSep}${r.invoiceNo}</TRANSDESCRIPTION>
             <JVAMOUNT>${total}</JVAMOUNT>
         </JV>`;
-    indexNum++;
     requestId++;
-  }
+  });
 
   return `<?xml version="1.0"?>\n<NMEXML EximID="1" BranchCode="${BRANCH_CODE}" ACCOUNTANTCOPYID="">\n<TRANSACTIONS OnError="CONTINUE">\n${transactions}\n</TRANSACTIONS>\n</NMEXML>`;
 }
 
 function formatDate(serial) {
-  if (typeof serial === "string" && (serial.includes("-") || serial.includes("/"))) {
-    const d = new Date(serial);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  if (typeof serial === "string") {
+    const s = serial.trim();
+    const pad = (n) => n.padStart(2, "0");
+    // Tanggal berupa teks: dd/mm/yyyy (format Indonesia) atau yyyy-mm-dd
+    let m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
+    if (m) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+    m = /^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})/.exec(s);
+    if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
   }
   if (typeof serial === "number") {
     const utc_days = Math.floor(serial - 25569);
@@ -386,6 +498,11 @@ const el = {
   startIndex: $("startIndex"),
   jvPreview: $("jvPreview"),
   continueIndex: $("continueIndex"),
+  periodManual: $("periodManual"),
+  periodNote: $("periodNote"),
+  periodAuto: $("periodAuto"),
+  periodSource: $("periodSource"),
+  periodList: $("periodList"),
   accountFields: $("accountFields"),
   journalSchema: $("journalSchema"),
   dropzone: $("dropzone"),
@@ -422,6 +539,10 @@ const state = {
   records: [],
   filter: "all",
   periodTouched: false,
+  // true jika file punya kolom Masa Pajak: periode jurnal diambil per baris
+  autoPeriod: false,
+  // nomor urut awal per periode "YYMM" yang diisi user (mode Masa Pajak)
+  starts: {},
   storageOk: null,
   downloadUrl: null,
 };
@@ -492,17 +613,57 @@ function displayDate(d) {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : esc(d ?? "–");
 }
 
-function period() {
-  return { year: el.year.value, month: el.month.value };
+// Periode "YYMM" dari pilihan bulan & tahun (dipakai jika tidak ada Masa Pajak)
+function manualPeriodKey() {
+  return el.year.value + el.month.value;
 }
 
-function periodLabel(yy, mm) {
-  return `${MONTHS[Number(mm) - 1] ?? mm} 20${yy}`;
+function periodLabel(key) {
+  const mm = key.slice(2);
+  return `${MONTHS[Number(mm) - 1] ?? mm} 20${key.slice(0, 2)}`;
 }
 
 function startIndex() {
   const n = parseInt(el.startIndex.value, 10);
   return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+// Nomor urut awal untuk satu periode Masa Pajak; jika belum diisi,
+// ikut nomor urut di isian manual (bawaan 1).
+function periodStart(key) {
+  const n = parseInt(state.starts[key], 10);
+  return Number.isFinite(n) && n > 0 ? n : startIndex();
+}
+
+// Faktur valid dikelompokkan per periode jurnal: [{ key: "2601", count, start }].
+// Dengan kolom Masa Pajak, periode diambil dari tiap baris; tanpa itu
+// semua faktur memakai bulan & tahun yang dipilih manual.
+function periodGroups() {
+  const valid = state.records.filter((r) => r.valid);
+  if (!state.autoPeriod) {
+    return [{ key: manualPeriodKey(), count: valid.length, start: startIndex() }];
+  }
+  const counts = {};
+  for (const r of valid) counts[r.period] = (counts[r.period] || 0) + 1;
+  return Object.keys(counts)
+    .sort()
+    .map((key) => ({ key, count: counts[key], start: periodStart(key) }));
+}
+
+// Nomor jurnal tiap baris (null untuk yang dilewati), berurutan per periode
+function jvNumbers(groups) {
+  const next = {};
+  for (const g of groups) next[g.key] = g.start;
+  return state.records.map((r) => {
+    if (!r.valid) return null;
+    const key = state.autoPeriod ? r.period : groups[0].key;
+    return jvNumber(state.mode, key, next[key]++);
+  });
+}
+
+function jvRange(g) {
+  const first = jvNumber(state.mode, g.key, g.start);
+  return g.count > 1 ? `${first} s/d ${jvNumber(state.mode, g.key, g.start + g.count - 1)}` : first;
 }
 
 function accountValues() {
@@ -593,26 +754,107 @@ function renderPeriod() {
     hideResult();
     updateAll();
   });
+
+  el.periodList.addEventListener("input", (e) => {
+    const input = e.target.closest("[data-start]");
+    if (!input) return;
+    state.starts[input.dataset.start] = input.value;
+    hideResult();
+    updateAll();
+  });
+  el.periodList.addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-continue]");
+    if (!chip) return;
+    const key = chip.dataset.continue;
+    state.starts[key] = chip.dataset.next;
+    $(`start-${key}`).value = chip.dataset.next;
+    hideResult();
+    updateAll();
+  });
 }
 
-function lastIndexKey() {
-  const { year, month } = period();
-  return `lastIndex.${state.mode.category}.${year}${month}`;
+function lastIndexKey(key) {
+  return `lastIndex.${state.mode.category}.${key}`;
 }
 
-function updatePeriodPreview() {
-  const { year, month } = period();
-  el.jvPreview.textContent = jvNumber(state.mode, year, month, startIndex());
+// Tampilkan tombol "Lanjutkan dari …" jika nomor awal bentrok dengan
+// jurnal periode yang sama yang sudah pernah dibuat.
+function updateContinueChip(chip, key, start) {
+  const last = load(lastIndexKey(key), null);
+  const show = !!last && start <= last;
+  chip.classList.toggle("hidden", !show);
+  if (!show) return;
+  const pad = (n) => String(n).padStart(3, "0");
+  chip.dataset.next = last + 1;
+  chip.textContent = `Lanjutkan dari ${pad(last + 1)} (terakhir dipakai ${pad(last)})`;
+}
 
-  const last = load(lastIndexKey(), null);
-  if (last && startIndex() <= last) {
-    const next = last + 1;
-    el.continueIndex.dataset.next = next;
-    el.continueIndex.textContent = `Lanjutkan dari ${String(next).padStart(3, "0")} (terakhir dipakai ${String(last).padStart(3, "0")})`;
-    el.continueIndex.classList.remove("hidden");
-  } else {
-    el.continueIndex.classList.add("hidden");
+function renderPeriods(groups) {
+  const auto = state.autoPeriod;
+  el.periodManual.classList.toggle("hidden", auto);
+  el.periodAuto.classList.toggle("hidden", !auto);
+
+  if (!auto) {
+    const key = manualPeriodKey();
+    el.jvPreview.textContent = jvNumber(state.mode, key, startIndex());
+    updateContinueChip(el.continueIndex, key, startIndex());
+    const noColumn = !!state.file;
+    el.periodNote.className = `notice ${noColumn ? "warn" : "info"}`;
+    el.periodNote.innerHTML = `${icon(noColumn ? "i-alert" : "i-info")}<div class="notice-body">${
+      noColumn
+        ? "File ini tidak memiliki kolom <b>Masa Pajak</b>. Pastikan bulan &amp; tahun di atas sudah benar."
+        : "Bulan &amp; tahun akan terisi otomatis dari kolom <b>Masa Pajak</b> setelah file Excel diunggah di langkah 4."
+    }</div>`;
+    return;
   }
+
+  el.periodSource.innerHTML =
+    groups.length > 1
+      ? `Bulan &amp; tahun dibaca dari kolom <b>Masa Pajak</b>. File ini berisi ${groups.length} masa pajak, nomor urut dihitung terpisah untuk masing-masing.`
+      : "Bulan &amp; tahun dibaca dari kolom <b>Masa Pajak</b> di file Excel.";
+
+  // Susun ulang baris hanya jika daftar periodenya berubah, supaya kursor
+  // tidak hilang saat mengetik nomor urut.
+  const sig = groups.map((g) => g.key).join(",");
+  if (el.periodList.dataset.sig !== sig) {
+    el.periodList.dataset.sig = sig;
+    el.periodList.innerHTML =
+      groups
+        .map(
+          (g) => `
+        <div class="period-row" data-period="${g.key}">
+          <div class="period-name">
+            <strong>${esc(periodLabel(g.key))}</strong>
+            <span class="muted small period-count"></span>
+          </div>
+          <div class="period-start">
+            <label for="start-${g.key}">Mulai dari nomor urut</label>
+            <input type="number" id="start-${g.key}" data-start="${g.key}" min="1" step="1"
+              inputmode="numeric" value="${g.start}" />
+          </div>
+          <div class="period-jv">
+            <span class="period-range"></span>
+            <button type="button" class="chip hidden" data-continue="${g.key}"></button>
+          </div>
+        </div>`
+        )
+        .join("") || `<p class="muted small">Belum ada faktur yang bisa diproses.</p>`;
+  }
+  for (const g of groups) {
+    const row = el.periodList.querySelector(`[data-period="${g.key}"]`);
+    row.querySelector(".period-count").textContent = `${g.count} faktur`;
+    row.querySelector(".period-range").innerHTML = jvRange(g)
+      .split(" s/d ")
+      .map((jv) => `<code>${esc(jv)}</code>`)
+      .join(`<span class="muted small">s/d</span>`);
+    updateContinueChip(row.querySelector("[data-continue]"), g.key, g.start);
+  }
+}
+
+// Dipanggil saat file baru dimuat agar daftar periode disusun ulang
+function resetPeriods() {
+  state.starts = {};
+  delete el.periodList.dataset.sig;
 }
 
 // =================================================================
@@ -699,12 +941,17 @@ function renderColumnsHelp() {
     dpp: "DPP",
     ppn: "PPN",
   };
+  const codes = (names) => names.map((n) => `<code>${esc(n)}</code>`).join("");
   const rows = Object.entries(state.mode.columns)
-    .map(([k, names]) => `<tr><td>${labels[k]}</td><td>${names.map((n) => `<code>${esc(n)}</code>`).join("")}</td></tr>`)
+    .map(([k, names]) => `<tr><td>${labels[k]}</td><td>${codes(names)}</td></tr>`)
     .join("");
   el.columnsHelpBody.innerHTML = `
-    <p class="muted">Baris pertama (judul kolom) di Excel harus memuat salah satu nama berikut:</p>
-    <table>${rows}</table>`;
+    <p class="muted">Judul kolom di Excel harus memuat salah satu nama berikut
+      (huruf besar/kecil dan spasi tidak berpengaruh):</p>
+    <table>${rows}
+      <tr><td>Masa Pajak</td><td>${codes(PERIOD_COLUMNS)}
+        <div class="muted">Opsional — menentukan bulan &amp; tahun pada nomor jurnal, mis. Januari 2026 → .26.01.</div></td></tr>
+    </table>`;
 }
 
 function handleFile(file) {
@@ -723,12 +970,15 @@ function handleFile(file) {
     try {
       const workbook = XLSX.read(event.target.result, { type: "array" });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      state.rawRows = XLSX.utils.sheet_to_json(worksheet);
+      state.rawRows = readRows(worksheet);
+      state.autoPeriod = state.rawRows.some((row) => readPeriod(row));
+      resetPeriods();
       state.file = file;
       state.filter = "all";
       hideResult();
       processRows();
-      autoDetectPeriod();
+      if (state.autoPeriod) announcePeriods();
+      else autoDetectPeriod();
       updateAll();
     } catch (error) {
       console.error("Error processing file:", error);
@@ -743,8 +993,13 @@ function processRows() {
   state.records = state.rawRows.map((row) => extractRecord(state.mode, row));
 }
 
-// Jika semua faktur ada di satu bulan yang sama dan user belum memilih
-// periode sendiri, isi periode otomatis sesuai tanggal faktur.
+function announcePeriods() {
+  const labels = periodGroups().map((g) => periodLabel(g.key));
+  if (labels.length) toast(`Periode jurnal diambil dari Masa Pajak: ${labels.join(", ")}.`, "info");
+}
+
+// File tanpa kolom Masa Pajak: jika user belum memilih periode sendiri,
+// isi periode otomatis sesuai bulan terbanyak pada tanggal faktur.
 function autoDetectPeriod() {
   if (state.periodTouched) return;
   const counts = {};
@@ -760,10 +1015,10 @@ function autoDetectPeriod() {
   if (el.year.value === yy && el.month.value === mm) return;
   el.year.value = yy;
   el.month.value = mm;
-  toast(`Periode disesuaikan ke ${periodLabel(yy, mm)} sesuai tanggal faktur.`, "info");
+  toast(`Periode disesuaikan ke ${periodLabel(yy + mm)} sesuai tanggal faktur.`, "info");
 }
 
-function renderFile() {
+function renderFile(jvs = jvNumbers(periodGroups())) {
   const hasFile = !!state.file;
   el.dropzone.classList.toggle("hidden", hasFile);
   el.fileCard.classList.toggle("hidden", !hasFile);
@@ -793,17 +1048,15 @@ function renderFile() {
   });
 
   // Tabel
-  const { year, month } = period();
-  let jvIndex = startIndex();
   const rows = [];
   state.records.forEach((r, i) => {
-    const jv = r.valid ? jvNumber(state.mode, year, month, jvIndex++) : null;
+    const jv = jvs[i];
     if (state.filter === "valid" && !r.valid) return;
     if (state.filter === "skip" && r.valid) return;
     if (rows.length >= 1000) return;
     rows.push(`
       <tr class="${r.valid ? "" : "skip"}">
-        <td class="muted">${i + 2}</td>
+        <td class="muted">${r.rowNum}</td>
         <td class="inv">${esc(r.invoiceNo ?? "–")}<div class="npwp">${
           r.code ? `<span class="code-tag">Kode ${esc(r.code)}</span> ` : ""
         }${displayDate(r.date)}</div></td>
@@ -837,13 +1090,16 @@ function renderFormatWarning(validCount) {
   const headers = new Set(state.rawRows.flatMap((r) => Object.keys(r)));
   const labels = { invoiceNo: "No. Faktur", date: "Tanggal", name: "Nama", npwp: "NPWP", dpp: "DPP", ppn: "PPN" };
   const missing = Object.entries(state.mode.columns)
-    .filter(([, names]) => !names.some((n) => headers.has(n)))
+    .filter(([, names]) => !names.some((n) => headers.has(normKey(n))))
     .map(([k]) => labels[k]);
 
-  // Cari jenis faktur lain yang cocok dengan file ini
+  // Cari jenis faktur lain yang cocok dengan file ini. Lampiran B1/B2/B3
+  // Coretax memakai kolom yang hampir sama, jadi jika jumlahnya seri
+  // dipakai tebakan dari kolom pembedanya.
+  const guess = guessModeId(headers);
   const better = MODES.filter((m) => m !== state.mode)
     .map((m) => ({ m, n: state.rawRows.filter((row) => extractRecord(m, row).valid).length }))
-    .sort((a, b) => b.n - a.n)[0];
+    .sort((a, b) => b.n - a.n || (b.m.id === guess) - (a.m.id === guess))[0];
 
   el.formatWarning.innerHTML = `
     ${icon("i-alert")}
@@ -864,10 +1120,22 @@ function renderFormatWarning(validCount) {
   el.formatWarning.classList.remove("hidden");
 }
 
+// Tebakan lampiran SPT dari judul kolom (A2: pembeli, B1: ada Keterangan,
+// B2: ada Kode Transaksi, B3: tanpa keduanya). Hanya untuk saran.
+function guessModeId(headers) {
+  if (headers.has("namapembeli")) return "keluaran";
+  if (headers.has("keterangan")) return "b1";
+  if (headers.has("kodetransaksi")) return "b2";
+  if (headers.has("namapenjual")) return "b3";
+  return null;
+}
+
 function clearFile() {
   state.file = null;
   state.rawRows = [];
   state.records = [];
+  state.autoPeriod = false;
+  resetPeriods();
   el.fileInput.value = "";
   hideResult();
   updateAll();
@@ -876,19 +1144,25 @@ function clearFile() {
 // =================================================================
 // RINGKASAN & TOMBOL KONVERSI
 // =================================================================
-function readiness() {
-  const { year, month } = period();
+function readiness(groups) {
   const accounts = accountValues();
   const accTotal = Object.keys(accounts).length;
   const accFilled = Object.values(accounts).filter(Boolean).length;
   const validCount = state.records.filter((r) => r.valid).length;
+  const [first] = groups;
 
   return [
     { ok: true, label: "Jenis faktur", sub: state.mode.title, step: "step1" },
     {
-      ok: !!year && !!month,
+      ok: true,
       label: "Periode",
-      sub: `${periodLabel(year, month)} · mulai ${jvNumber(state.mode, year, month, startIndex())}`,
+      sub: !first
+        ? "Dari Masa Pajak · menunggu faktur valid"
+        : groups.length > 1
+        ? `Dari Masa Pajak · ${groups.map((g) => periodLabel(g.key)).join(", ")}`
+        : `${periodLabel(first.key)}${state.autoPeriod ? " (Masa Pajak)" : ""} · mulai ${jvNumber(
+            state.mode, first.key, first.start
+          )}`,
       step: "step2",
     },
     {
@@ -911,11 +1185,12 @@ function readiness() {
 }
 
 function updateAll() {
-  updatePeriodPreview();
+  const groups = periodGroups();
+  renderPeriods(groups);
   updateChipsAndSchema();
-  renderFile();
+  renderFile(jvNumbers(groups));
 
-  const items = readiness();
+  const items = readiness(groups);
   el.checklist.innerHTML = items
     .map(
       (it) => `<li class="${it.ok ? "ok" : ""}"><span class="tick">${icon("i-check")}</span>
@@ -936,28 +1211,29 @@ function updateAll() {
 }
 
 function convert() {
-  const { year, month } = period();
   const accounts = accountValues();
-  const start = startIndex();
+  const groups = periodGroups();
   const valid = state.records.filter((r) => r.valid);
   if (!valid.length) return;
 
-  const xml = buildXml(state.mode, state.records, accounts, year, month, start);
-  const filename = `${state.mode.category}_${year}${month}_${Date.now()}.xml`;
-  const last = start + valid.length - 1;
+  const xml = buildXml(state.mode, state.records, accounts, jvNumbers(groups));
+  const keys = groups.map((g) => g.key);
+  const span = keys.length > 1 ? `${keys[0]}-${keys[keys.length - 1]}` : keys[0];
+  const filename = `${state.mode.category}_${span}_${Date.now()}.xml`;
 
   el.xmlOutput.textContent = xml;
   if (state.downloadUrl) URL.revokeObjectURL(state.downloadUrl);
   state.downloadUrl = URL.createObjectURL(new Blob([xml], { type: "application/xml" }));
   el.downloadLink.href = state.downloadUrl;
   el.downloadLink.download = filename;
-  el.resultText.textContent = `${valid.length} jurnal · ${jvNumber(state.mode, year, month, start)} s/d ${jvNumber(
-    state.mode, year, month, last
-  )}`;
+  el.resultText.textContent = `${valid.length} jurnal · ${groups.map(jvRange).join("; ")}`;
   el.resultCard.classList.remove("hidden");
   el.convertHint.classList.add("hidden");
 
-  store(lastIndexKey(), Math.max(last, load(lastIndexKey(), 0)));
+  for (const g of groups) {
+    const last = g.start + g.count - 1;
+    store(lastIndexKey(g.key), Math.max(last, load(lastIndexKey(g.key), 0)));
+  }
   saveToHistory(filename, xml);
   toast(`${valid.length} jurnal berhasil dibuat.`, "success");
   el.resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -1056,8 +1332,11 @@ function renderHistory(data) {
   }
   el.historyList.innerHTML = "";
   for (const item of data) {
-    const m = /_(\d{2})(\d{2})_\d+\.xml$/.exec(item.filename);
-    const title = m ? `Periode ${periodLabel(m[1], m[2])}` : item.filename;
+    // Nama file: <kategori>_<YYMM>[-<YYMM>]_<waktu>.xml
+    const m = /_(\d{4})(?:-(\d{4}))?_\d+\.xml$/.exec(item.filename);
+    const title = m
+      ? `Periode ${periodLabel(m[1])}${m[2] ? ` – ${periodLabel(m[2])}` : ""}`
+      : item.filename;
     const when = new Date(item.created_at).toLocaleString("id-ID", {
       day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
     });

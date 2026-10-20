@@ -9,15 +9,24 @@ Jenis faktur yang didukung:
 
 | Jenis | Untuk | Nomor jurnal |
 | --- | --- | --- |
-| Keluaran | Penjualan | `PENJ.YY.MM.001` |
+| Keluaran A2 | Penjualan | `PENJ.YY.MM.001` |
 | Masukan B1 | Impor (PIB) | `PIB.YY.MM.001` |
 | Masukan B2 | Pembelian dalam negeri, PPN dikreditkan | `PEMB.YY.MM.001` |
 | Masukan B3 | Pembelian, PPN tidak dikreditkan | `PEMB.NON.YY.MM.001` |
 
+`YY.MM` diambil otomatis dari kolom **Masa Pajak** di Excel (mis. `Januari 2026` → `26.01`), nomor urut
+(`001`) diisi pengguna. Jika satu file berisi beberapa masa pajak, nomor urut dihitung terpisah per masa pajak.
+File tanpa kolom Masa Pajak tetap bisa dipakai dengan memilih bulan & tahun secara manual.
+
+Kolom Excel yang dibaca mengikuti lampiran SPT Masa PPN Coretax (A2, B1, B2, B3):
+`Masa Pajak`, `Nomor Faktur/Dokumen`, `Tanggal Faktur/Dokumen`, `NPWP/NIK Pembeli` atau `NPWP/NIK Penjual`,
+`Nama Pembeli` atau `Nama Penjual`, `Harga Jual / Penggantian / DPP`, dan `PPN`. Nama kolom format lama
+(e-Faktur/DJP) tetap dikenali.
+
 ## Cara pakai
 
 1. Pilih jenis faktur.
-2. Pilih bulan, tahun, dan nomor urut awal jurnal.
+2. Isi nomor urut awal jurnal (bulan & tahun terisi otomatis dari Masa Pajak setelah file diunggah).
 3. Isi nomor akun sesuai daftar akun di database Accurate Anda (isian diingat otomatis).
 4. Unggah file Excel, periksa tabel pratinjau (baris yang dilewati ditandai beserta alasannya).
 5. Klik **Buat File XML**, unduh, lalu impor ke Accurate 5.
