@@ -23,6 +23,14 @@ Kolom Excel yang dibaca mengikuti lampiran SPT Masa PPN Coretax (A2, B1, B2, B3)
 `Nama Pembeli` atau `Nama Penjual`, `Harga Jual / Penggantian / DPP`, dan `PPN`. Nama kolom format lama
 (e-Faktur/DJP) tetap dikenali.
 
+Format daftar faktur Keluaran/Masukan juga didukung:
+`Nomor Faktur`, `Tanggal Faktur`, `NPWP Pembeli`/`NPWP Penjual`, `Nama Pembeli`/`Nama Penjual`,
+`Kode Transaksi`, `Harga Jual / Penggantian`, `DPP Nilai Lain`, `PPN`, `PPnBM`, `Status`, `Referensi`
+(Masukan: ditambah `Status Pengkreditan` dan `Masa Pengkreditan`). DPP jurnal diambil dari
+`Harga Jual / Penggantian`; kolom `DPP Nilai Lain`, `PPnBM`, `Status`, `Referensi`, `Status Pengkreditan`,
+dan `Masa Pengkreditan` tidak dipakai. Format ini tidak punya kolom Masa Pajak, jadi bulan & tahun jurnal
+dipilih manual (terisi otomatis dari bulan terbanyak pada Tanggal Faktur).
+
 ## Cara pakai
 
 1. Pilih jenis faktur.

@@ -36,7 +36,9 @@ const TAX_YEAR_COLUMNS = ["Tahun Pajak"];
 // KONFIGURASI JENIS FAKTUR
 // `columns` berisi nama-nama kolom Excel yang dicoba berurutan
 // (kolom pertama yang ada isinya yang dipakai). Nama pertama adalah
-// format lampiran SPT Masa PPN Coretax; sisanya format lama.
+// format lampiran SPT Masa PPN Coretax; sisanya format lama dan format
+// daftar faktur (Nomor Faktur, Tanggal Faktur, Harga Jual / Penggantian, …).
+// DPP jurnal = Harga Jual / Penggantian, bukan kolom DPP Nilai Lain.
 // -----------------------------------------------------------------
 const MODES = [
   {
@@ -55,15 +57,17 @@ const MODES = [
         "Nomor Faktur/Dokumen",
         "Nomor Faktur Pajak",
         "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Nomor",
+        "Nomor Faktur",
       ],
       date: [
         "Tanggal Faktur/Dokumen",
         "Tanggal Faktur Pajak",
         "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Tanggal",
+        "Tanggal Faktur",
       ],
       name: ["Nama Pembeli", "Nama Pembeli BKP/Penerima Manfaat BKP Tidak Berwujud/Penerima JKP"],
-      npwp: ["NPWP/NIK Pembeli", "NPWP Pembeli / Identitas lainnya", "NPWP/NIK/Nomor Paspor"],
-      dpp: ["Harga Jual / Penggantian / DPP", "Harga Jual/Penggantian/DPP (Rupiah)"],
+      npwp: ["NPWP/NIK Pembeli", "NPWP Pembeli / Identitas lainnya", "NPWP/NIK/Nomor Paspor", "NPWP Pembeli"],
+      dpp: ["Harga Jual / Penggantian / DPP", "Harga Jual/Penggantian/DPP (Rupiah)", "Harga Jual / Penggantian"],
       ppn: ["PPN", "PPN (Rupiah)"],
     },
     accounts: [
@@ -133,11 +137,11 @@ const MODES = [
     parseNum: parseFloat,
     descSep: "\n ",
     columns: {
-      invoiceNo: ["Nomor Faktur/Dokumen", "Nomor Dokumen"],
-      date: ["Tanggal Faktur/Dokumen", "Tanggal Dokumen"],
+      invoiceNo: ["Nomor Faktur/Dokumen", "Nomor Dokumen", "Nomor Faktur"],
+      date: ["Tanggal Faktur/Dokumen", "Tanggal Dokumen", "Tanggal Faktur"],
       name: ["Nama Penjual"],
       npwp: ["NPWP/NIK Penjual", "NPWP Penjual"],
-      dpp: ["Harga Jual / Penggantian / DPP", "DPP / Penghasilan Kotor"],
+      dpp: ["Harga Jual / Penggantian / DPP", "DPP / Penghasilan Kotor", "Harga Jual / Penggantian"],
       ppn: ["PPN"],
     },
     accounts: purchaseAccounts(true),
@@ -207,7 +211,12 @@ const MODES = [
 ];
 
 function purchaseColumns(withImportDpp) {
-  const dpp = ["Harga Jual / Penggantian / DPP", "Harga Jual/Penggantian/DPP (Rupiah)", "DPP (Rupiah)"];
+  const dpp = [
+    "Harga Jual / Penggantian / DPP",
+    "Harga Jual/Penggantian/DPP (Rupiah)",
+    "DPP (Rupiah)",
+    "Harga Jual / Penggantian",
+  ];
   if (withImportDpp) dpp.push("Harga Jual/Penggantian/Nilai Impor/DPP (Rupiah)");
   return {
     invoiceNo: [
@@ -215,12 +224,14 @@ function purchaseColumns(withImportDpp) {
       "Nomor Faktur Pajak",
       "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Nomor",
       "Dokumen Tertentu - Nomor",
+      "Nomor Faktur",
     ],
     date: [
       "Tanggal Faktur/Dokumen",
       "Tanggal Faktur Pajak",
       "Faktur Pajak/Dokumen Tertentu/Nota Retur/Nota Pembatalan - Tanggal",
       "Dokumen Tertentu - Tanggal",
+      "Tanggal Faktur",
     ],
     name: [
       "Nama Penjual",
