@@ -508,6 +508,13 @@ input:disabled {
 .account.disabled .account-label {
   color: var(--muted);
 }
+.retur-block .notice {
+  margin: 0 0 10px;
+}
+.account.retur.missing {
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  background: color-mix(in srgb, var(--warn-soft) 60%, var(--surface-2));
+}
 
 .schema {
   margin-top: 16px;
@@ -534,6 +541,9 @@ input:disabled {
 }
 .schema tr:first-child td {
   border-top: none;
+}
+.schema table + .schema-title {
+  border-top: 1px solid var(--border);
 }
 .schema td.amt {
   text-align: right;
@@ -796,6 +806,11 @@ input:disabled {
   border: 1px solid var(--border);
   color: var(--text-2);
 }
+.code-tag.retur {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+  color: var(--danger);
+}
 .data-table .ignored {
   font-size: 11px;
   color: var(--muted);
@@ -903,6 +918,11 @@ input:disabled {
 }
 .btn-ghost:hover {
   background: var(--surface-2);
+}
+.btn-ghost.danger:hover {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger);
 }
 .icon-btn {
   border: none;
@@ -1046,6 +1066,15 @@ input:disabled {
   align-items: center;
   margin-bottom: 8px;
 }
+.history-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.history-tools .btn .icon {
+  width: 15px;
+  height: 15px;
+}
 .history {
   list-style: none;
   margin: 0;
@@ -1132,6 +1161,19 @@ input:disabled {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 18px;
+}
+.confirm-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.confirm-option input {
+  margin-top: 3px;
+}
+.field-note {
+  margin-top: 6px;
 }
 .howto {
   margin: 0;

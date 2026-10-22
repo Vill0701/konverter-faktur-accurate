@@ -166,6 +166,7 @@
                 <button type="button" data-filter="all" class="active">Semua</button>
                 <button type="button" data-filter="valid">Akan diproses</button>
                 <button type="button" data-filter="skip">Dilewati</button>
+                <button type="button" data-filter="retur" class="hidden">Retur</button>
               </div>
             </div>
             <div class="table-wrap">
@@ -227,7 +228,13 @@
             <h3 class="side-title">
               <svg class="icon"><use href="#i-history" /></svg> Riwayat
             </h3>
-            <span class="muted small" id="historyModeLabel"></span>
+            <div class="history-tools">
+              <span class="muted small" id="historyModeLabel"></span>
+              <button class="btn btn-ghost btn-sm danger hidden" id="clearHistory" type="button"
+                title="Hapus semua riwayat jenis faktur ini">
+                <svg class="icon"><use href="#i-trash" /></svg><span>Hapus semua</span>
+              </button>
+            </div>
           </div>
           <ul class="history" id="historyList">
             <li class="muted small">Memuat riwayat…</li>
@@ -281,6 +288,7 @@
           <dt>Debit / Kredit</dt><dd>Sisi pencatatan jurnal. Total debit selalu sama dengan total kredit.</dd>
           <dt>Riwayat</dt><dd>File XML yang pernah dibuat disimpan di browser ini saja. Di komputer atau browser lain riwayatnya berbeda, dan akan hilang jika data/cache browser dihapus. Simpan file XML penting di folder Anda.</dd>
           <dt>Dilewati</dt><dd>Baris yang datanya tidak lengkap (mis. NPWP atau nomor faktur kosong) sehingga tidak dibuatkan jurnal.</dd>
+          <dt>Retur</dt><dd>Faktur dengan DPP/PPN bernilai minus. Jurnalnya dibalik (debit ↔ kredit) dan memakai Akun Retur Penjualan/Pembelian yang Anda isi sebagai pengganti Akun Penjualan/Pembelian.</dd>
         </dl>
       </div>
     </dialog>
@@ -290,11 +298,33 @@
       <div class="modal-body">
         <h3 id="confirmTitle">Hapus file?</h3>
         <p class="muted" id="confirmText"></p>
+        <label class="confirm-option hidden" id="confirmOption">
+          <input type="checkbox" id="confirmCheck" />
+          <span id="confirmCheckLabel"></span>
+        </label>
         <div class="modal-actions">
           <button class="btn btn-ghost" type="button" value="cancel" data-close>Batal</button>
           <button class="btn btn-danger" type="button" id="confirmOk">Hapus</button>
         </div>
       </div>
+    </dialog>
+
+    <!-- Dialog akun retur (muncul jika file berisi faktur bernilai minus) -->
+    <dialog class="modal modal-sm" id="returDialog">
+      <form class="modal-body" method="dialog" id="returForm">
+        <h3 id="returTitle">Faktur retur terdeteksi</h3>
+        <p class="muted" id="returText"></p>
+        <div class="field">
+          <label for="returInput" id="returLabel">Nomor Akun Retur</label>
+          <input type="text" id="returInput" placeholder="Nomor akun di Accurate" required
+            autocomplete="off" spellcheck="false" />
+          <div class="muted small field-note">Bisa diubah lagi di langkah 3.</div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-close>Nanti</button>
+          <button class="btn btn-primary" type="submit">Simpan</button>
+        </div>
+      </form>
     </dialog>
 
     <div class="toasts" id="toasts" aria-live="polite"></div>

@@ -87,6 +87,12 @@ const MODES = [
         suggestions: [["2100.01", "PPN Penjualan"]],
       },
     ],
+    // Faktur bernilai minus (retur) memakai akun ini sebagai pengganti akun `replaces`
+    returAccount: {
+      key: "salesReturn", replaces: "sales", label: "Akun Retur Penjualan", side: "debit", amount: "DPP",
+      hint: "Menggantikan Akun Penjualan untuk faktur bernilai minus (retur).",
+      suggestions: [],
+    },
     lines(r, a, total) {
       return `
             <ACCOUNTLINE operation="Add">
@@ -145,6 +151,7 @@ const MODES = [
       ppn: ["PPN"],
     },
     accounts: purchaseAccounts(true),
+    returAccount: purchaseReturnAccount(true),
     lines: purchaseLines,
   },
   {
@@ -160,6 +167,7 @@ const MODES = [
     descSep: " - ",
     columns: purchaseColumns(false),
     accounts: purchaseAccounts(true),
+    returAccount: purchaseReturnAccount(true),
     lines: purchaseLines,
   },
   {
@@ -181,6 +189,7 @@ const MODES = [
     schemaNote:
       "Kode transaksi 07/08 (PPN tidak dipungut/dibebaskan): PPN diabaikan, pembelian & hutang = Harga Jual saja.",
     accounts: purchaseAccounts(false),
+    returAccount: purchaseReturnAccount(false),
     lines(r, a, total) {
       return `
             <ACCOUNTLINE operation="Add">
@@ -273,6 +282,15 @@ function purchaseAccounts(creditable) {
       suggestions: [["210102", "Hutang Usaha"]],
     },
   ];
+}
+
+function purchaseReturnAccount(creditable) {
+  return {
+    key: "purchaseReturn", replaces: "purchase", label: "Akun Retur Pembelian", side: "credit",
+    amount: creditable ? "DPP" : "DPP + PPN",
+    hint: "Menggantikan Akun Pembelian untuk faktur bernilai minus (retur).",
+    suggestions: [],
+  };
 }
 
 // Jurnal pembelian B1 & B2: Pembelian (D), PPN Masukan (D), Hutang (K)
@@ -441,6 +459,9 @@ function extractRecord(mode, row) {
   r.valid = reasons.length === 0;
   r.reasons = reasons;
   r.total = r.valid ? r.dpp + r.ppn : NaN;
+  // DPP/PPN minus = nota retur: debit/kredit terbalik dengan sendirinya,
+  // akun penjualan/pembelian diganti akun retur saat membuat XML
+  r.retur = r.valid && (r.dpp < 0 || r.ppn < 0);
   return r;
 }
 
@@ -453,22 +474,25 @@ function jvNumber(mode, key, index) {
 function buildXml(mode, records, accounts, jvs) {
   let transactions = "";
   let requestId = 1;
+  const ret = mode.returAccount;
+  const returAccounts = { ...accounts, [ret.replaces]: accounts[ret.key] };
 
   records.forEach((rec, i) => {
     if (!rec.valid) return;
     // Teks dari Excel di-escape agar nama seperti "CV. MAJU & JAYA" tidak merusak XML
     const r = { ...rec, name: esc(rec.name), npwp: esc(rec.npwp), invoiceNo: esc(rec.invoiceNo) };
     const total = r.dpp + r.ppn;
+    // JVAMOUNT = jumlah sisi debit, jadi untuk retur (total minus) tetap positif
     transactions += `
         <JV operation="Add" REQUESTID="${requestId}">
             <TRANSACTIONID>148</TRANSACTIONID>
-            ${mode.lines(r, accounts, total)}
+            ${mode.lines(r, rec.retur ? returAccounts : accounts, total)}
             <JVNUMBER>${jvs[i]}</JVNUMBER>
             <TRANSDATE>${r.date}</TRANSDATE>
             <SOURCE>GL</SOURCE>
             <TRANSTYPE>journal voucher</TRANSTYPE>
             <TRANSDESCRIPTION>${r.name}${mode.descSep}${r.npwp}${mode.descSep}${r.invoiceNo}</TRANSDESCRIPTION>
-            <JVAMOUNT>${total}</JVAMOUNT>
+            <JVAMOUNT>${Math.abs(total)}</JVAMOUNT>
         </JV>`;
     requestId++;
   });
@@ -539,6 +563,7 @@ const el = {
   xmlOutput: $("xmlOutput"),
   historyList: $("historyList"),
   historyModeLabel: $("historyModeLabel"),
+  clearHistory: $("clearHistory"),
   serverStatus: $("serverStatus"),
   toasts: $("toasts"),
 };
@@ -599,11 +624,16 @@ function toast(message, type = "info") {
   setTimeout(() => t.remove(), type === "error" ? 6000 : 3500);
 }
 
-function confirmDialog(title, text, okLabel = "Hapus") {
+// `option` = teks kotak centang tambahan (opsional); statusnya dibaca
+// pemanggil dari #confirmCheck setelah dialog ditutup.
+function confirmDialog(title, text, okLabel = "Hapus", option = null) {
   const dlg = $("confirmDialog");
   $("confirmTitle").textContent = title;
   $("confirmText").textContent = text;
   $("confirmOk").textContent = okLabel;
+  $("confirmOption").classList.toggle("hidden", !option);
+  $("confirmCheckLabel").textContent = option ?? "";
+  $("confirmCheck").checked = false;
   dlg.showModal();
   return new Promise((resolve) => {
     const done = (v) => {
@@ -679,12 +709,22 @@ function jvRange(g) {
 
 function accountValues() {
   const values = {};
-  for (const a of state.mode.accounts) {
+  for (const a of [...state.mode.accounts, state.mode.returAccount]) {
     if (a.disabled) continue;
     const input = $(`acc-${a.key}`);
     values[a.key] = input ? input.value.trim() : "";
   }
   return values;
+}
+
+function returCount() {
+  return state.records.filter((r) => r.retur).length;
+}
+
+// Akun yang wajib diisi; akun retur hanya jika file berisi faktur retur
+function requiredAccounts() {
+  const list = state.mode.accounts.filter((a) => !a.disabled);
+  return returCount() ? [...list, state.mode.returAccount] : list;
 }
 
 // =================================================================
@@ -873,11 +913,11 @@ function resetPeriods() {
 // =================================================================
 function renderAccounts() {
   const saved = load(`accounts.${state.mode.category}`, {});
-  el.accountFields.innerHTML = state.mode.accounts
-    .map((a) => {
-      const sideLabel = a.side === "debit" ? "Debit" : "Kredit";
-      const value = a.disabled ? "" : saved[a.key] ?? "";
-      const chips = a.disabled
+  const field = (a, extraClass = "") => {
+    const sideLabel = a.side === "debit" ? "Debit" : "Kredit";
+    const value = a.disabled ? "" : saved[a.key] ?? "";
+    const chips =
+      a.disabled || !a.suggestions.length
         ? ""
         : `<div class="chips">${a.suggestions
             .map(
@@ -885,8 +925,13 @@ function renderAccounts() {
                 `<button type="button" class="chip" data-fill="${a.key}" data-value="${esc(code)}"><code>${esc(code)}</code> · ${esc(name)}</button>`
             )
             .join("")}</div>`;
-      return `
-        <div class="account ${a.disabled ? "disabled" : ""}">
+    const placeholder = a.disabled
+      ? "Tidak diperlukan"
+      : a.suggestions.length
+      ? "Contoh: " + esc(a.suggestions[0][0])
+      : "Nomor akun di Accurate";
+    return `
+        <div class="account ${a.disabled ? "disabled" : ""} ${extraClass}">
           <div>
             <label class="account-label" for="acc-${a.key}">
               ${esc(a.label)}
@@ -896,13 +941,30 @@ function renderAccounts() {
           </div>
           <div>
             <input type="text" id="acc-${a.key}" value="${esc(value)}"
-              placeholder="${a.disabled ? "Tidak diperlukan" : "Contoh: " + esc(a.suggestions[0][0])}"
+              placeholder="${placeholder}"
               ${a.disabled ? "disabled" : ""} autocomplete="off" spellcheck="false" />
             ${chips}
           </div>
         </div>`;
-    })
-    .join("");
+  };
+  // Akun retur baru ditampilkan (dan wajib diisi) jika file berisi faktur bernilai minus
+  el.accountFields.innerHTML =
+    state.mode.accounts.map((a) => field(a)).join("") +
+    `<div class="retur-block hidden" id="returBlock">
+      <div class="notice warn">${icon("i-alert")}<div class="notice-body" id="returNote"></div></div>
+      ${field(state.mode.returAccount, "retur")}
+    </div>`;
+}
+
+function renderReturBlock() {
+  const n = returCount();
+  $("returBlock").classList.toggle("hidden", !n);
+  if (!n) return;
+  const ret = state.mode.returAccount;
+  const replaced = state.mode.accounts.find((a) => a.key === ret.replaces);
+  $("returNote").innerHTML = `<strong>${n} faktur retur terdeteksi.</strong> DPP/PPN-nya bernilai minus,
+    jadi jurnalnya dibalik dan memakai ${esc(ret.label)} sebagai pengganti ${esc(replaced.label)}.`;
+  el.accountFields.querySelector(".account.retur").classList.toggle("missing", !accountValues()[ret.key]);
 }
 
 function onAccountChange() {
@@ -918,25 +980,36 @@ function updateChipsAndSchema() {
     chip.classList.toggle("selected", values[chip.dataset.fill] === chip.dataset.value);
   });
 
-  const rows = state.mode.accounts
-    .filter((a) => !a.disabled)
-    .map((a) => {
-      const acc = values[a.key];
-      const d = a.side === "debit";
-      const star = state.mode.schemaNote && a.amount.includes("PPN") ? "*" : "";
-      return `<tr>
+  const table = (accounts) => {
+    const rows = accounts
+      .map((a) => {
+        const acc = values[a.key];
+        const d = a.side === "debit";
+        const star = state.mode.schemaNote && a.amount.includes("PPN") ? "*" : "";
+        return `<tr>
         <td>${d ? "" : "&emsp;&emsp;"}${acc ? `<strong>${esc(acc)}</strong>` : `<span class="muted">[belum diisi]</span>`} <span class="muted">${esc(a.label.replace("Akun ", ""))}</span></td>
         <td class="amt d">${d ? esc(a.amount) + star : ""}</td>
         <td class="amt c">${d ? "" : esc(a.amount) + star}</td>
       </tr>`;
-    })
-    .join("");
-  el.journalSchema.innerHTML = `
-    <div class="schema-title">Bentuk jurnal yang akan dibuat untuk setiap faktur</div>
-    <table>
+      })
+      .join("");
+    return `<table>
       <tr><td class="muted small">Akun</td><td class="amt muted small">Debit</td><td class="amt muted small">Kredit</td></tr>
       ${rows}
-    </table>
+    </table>`;
+  };
+  const normal = state.mode.accounts.filter((a) => !a.disabled);
+  // Jurnal retur = jurnal biasa dengan debit/kredit dibalik dan akun retur
+  // menggantikan akun penjualan/pembelian; baris debit tetap di atas.
+  const ret = state.mode.returAccount;
+  const flip = (a) => ({ ...a, side: a.side === "debit" ? "credit" : "debit" });
+  const retur = normal
+    .map((a) => (a.key === ret.replaces ? ret : flip(a)))
+    .sort((x, y) => (y.side === "debit") - (x.side === "debit"));
+  el.journalSchema.innerHTML = `
+    <div class="schema-title">Bentuk jurnal yang akan dibuat untuk setiap faktur</div>
+    ${table(normal)}
+    ${returCount() ? `<div class="schema-title">Bentuk jurnal untuk faktur retur (nilai minus)</div>${table(retur)}` : ""}
     ${state.mode.schemaNote ? `<div class="schema-note">* ${esc(state.mode.schemaNote)}</div>` : ""}`;
 }
 
@@ -991,6 +1064,7 @@ function handleFile(file) {
       if (state.autoPeriod) announcePeriods();
       else autoDetectPeriod();
       updateAll();
+      promptRetur();
     } catch (error) {
       console.error("Error processing file:", error);
       toast("File tidak dapat dibaca: " + error.message, "error");
@@ -1007,6 +1081,27 @@ function processRows() {
 function announcePeriods() {
   const labels = periodGroups().map((g) => periodLabel(g.key));
   if (labels.length) toast(`Periode jurnal diambil dari Masa Pajak: ${labels.join(", ")}.`, "info");
+}
+
+// Faktur bernilai minus (retur) terdeteksi: minta akun retur jika belum
+// pernah diisi; jika sudah, cukup beri tahu akun mana yang dipakai.
+function promptRetur() {
+  const n = returCount();
+  if (!n) return;
+  const ret = state.mode.returAccount;
+  const saved = accountValues()[ret.key];
+  if (saved) {
+    toast(`${n} faktur retur (nilai minus) terdeteksi, memakai ${ret.label} ${saved}.`, "info");
+    return;
+  }
+  const replaced = state.mode.accounts.find((a) => a.key === ret.replaces);
+  $("returTitle").textContent = `${n} faktur retur terdeteksi`;
+  $("returText").textContent =
+    `File ini berisi ${n} faktur dengan DPP/PPN bernilai minus. Faktur tersebut dicatat sebagai retur: ` +
+    `jurnalnya dibalik dan memakai akun retur sebagai pengganti ${replaced.label}.`;
+  $("returLabel").textContent = `Nomor ${ret.label}`;
+  $("returInput").value = "";
+  $("returDialog").showModal();
 }
 
 // File tanpa kolom Masa Pajak: jika user belum memilih periode sendiri,
@@ -1051,11 +1146,14 @@ function renderFile(jvs = jvNumbers(periodGroups())) {
 
   renderFormatWarning(valid.length);
 
-  // Filter
+  // Filter (tombol "Retur" hanya muncul jika ada faktur retur)
+  const returs = returCount();
+  if (state.filter === "retur" && !returs) state.filter = "all";
+  const counts = { all: state.records.length, valid: valid.length, skip: skipped, retur: returs };
   el.rowFilter.querySelectorAll("button").forEach((b) => {
     b.classList.toggle("active", b.dataset.filter === state.filter);
-    const n = b.dataset.filter === "all" ? state.records.length : b.dataset.filter === "valid" ? valid.length : skipped;
-    b.innerHTML = `${b.textContent.replace(/\s*\d+$/, "")}<span class="count">${n}</span>`;
+    if (b.dataset.filter === "retur") b.classList.toggle("hidden", !returs);
+    b.innerHTML = `${b.textContent.replace(/\s*\d+$/, "")}<span class="count">${counts[b.dataset.filter]}</span>`;
   });
 
   // Tabel
@@ -1064,13 +1162,14 @@ function renderFile(jvs = jvNumbers(periodGroups())) {
     const jv = jvs[i];
     if (state.filter === "valid" && !r.valid) return;
     if (state.filter === "skip" && r.valid) return;
+    if (state.filter === "retur" && !r.retur) return;
     if (rows.length >= 1000) return;
     rows.push(`
       <tr class="${r.valid ? "" : "skip"}">
         <td class="muted">${r.rowNum}</td>
         <td class="inv">${esc(r.invoiceNo ?? "–")}<div class="npwp">${
-          r.code ? `<span class="code-tag">Kode ${esc(r.code)}</span> ` : ""
-        }${displayDate(r.date)}</div></td>
+          r.retur ? `<span class="code-tag retur">Retur</span> ` : ""
+        }${r.code ? `<span class="code-tag">Kode ${esc(r.code)}</span> ` : ""}${displayDate(r.date)}</div></td>
         <td class="name">${esc(r.name ?? "–")}<div class="npwp">${esc(r.npwp ?? "")}</div></td>
         <td class="num hide-sm">${fmtNum(r.dpp)}</td>
         <td class="num hide-sm">${
@@ -1157,8 +1256,10 @@ function clearFile() {
 // =================================================================
 function readiness(groups) {
   const accounts = accountValues();
-  const accTotal = Object.keys(accounts).length;
-  const accFilled = Object.values(accounts).filter(Boolean).length;
+  const required = requiredAccounts();
+  const accTotal = required.length;
+  const accFilled = required.filter((a) => accounts[a.key]).length;
+  const returMissing = returCount() > 0 && !accounts[state.mode.returAccount.key];
   const validCount = state.records.filter((r) => r.valid).length;
   const [first] = groups;
 
@@ -1179,8 +1280,14 @@ function readiness(groups) {
     {
       ok: accFilled === accTotal,
       label: "Akun Accurate",
-      sub: accFilled === accTotal ? "Semua akun terisi" : `${accFilled} dari ${accTotal} akun terisi`,
+      sub:
+        accFilled === accTotal
+          ? "Semua akun terisi"
+          : `${accFilled} dari ${accTotal} akun terisi${returMissing ? " (akun retur belum diisi)" : ""}`,
       step: "step3",
+      hint: returMissing
+        ? `File berisi faktur retur. Isi ${state.mode.returAccount.label} di langkah 3.`
+        : "Isi semua nomor akun di langkah 3.",
     },
     {
       ok: validCount > 0,
@@ -1188,9 +1295,10 @@ function readiness(groups) {
       sub: !state.file
         ? "Belum ada file"
         : validCount
-        ? `${validCount} faktur siap diproses`
+        ? `${validCount} faktur siap diproses${returCount() ? ` (${returCount()} retur)` : ""}`
         : "Tidak ada faktur yang valid",
       step: "step4",
+      hint: "Unggah file Excel di langkah 4.",
     },
   ];
 }
@@ -1198,6 +1306,7 @@ function readiness(groups) {
 function updateAll() {
   const groups = periodGroups();
   renderPeriods(groups);
+  renderReturBlock();
   updateChipsAndSchema();
   renderFile(jvNumbers(groups));
 
@@ -1213,11 +1322,7 @@ function updateAll() {
   const ready = items.every((it) => it.ok);
   el.convertButton.disabled = !ready;
   const firstMissing = items.find((it) => !it.ok);
-  el.convertHint.textContent = ready
-    ? "Semua siap. Klik untuk membuat file XML."
-    : firstMissing.step === "step3"
-    ? "Isi semua nomor akun di langkah 3."
-    : "Unggah file Excel di langkah 4.";
+  el.convertHint.textContent = ready ? "Semua siap. Klik untuk membuat file XML." : firstMissing.hint;
   el.convertHint.classList.toggle("hidden", !el.resultCard.classList.contains("hidden"));
 }
 
@@ -1237,7 +1342,10 @@ function convert() {
   state.downloadUrl = URL.createObjectURL(new Blob([xml], { type: "application/xml" }));
   el.downloadLink.href = state.downloadUrl;
   el.downloadLink.download = filename;
-  el.resultText.textContent = `${valid.length} jurnal · ${groups.map(jvRange).join("; ")}`;
+  const returs = returCount();
+  el.resultText.textContent = `${valid.length} jurnal${returs ? ` (${returs} retur)` : ""} · ${groups
+    .map(jvRange)
+    .join("; ")}`;
   el.resultCard.classList.remove("hidden");
   el.convertHint.classList.add("hidden");
 
@@ -1290,6 +1398,21 @@ const historyDb = (() => {
     list: (category) => run("readonly", (s) => s.index("category").getAll(category)),
     get: (id) => run("readonly", (s) => s.get(id)),
     remove: (id) => run("readwrite", (s) => s.delete(id)),
+    // Tanpa `category`: hitung/hapus riwayat semua jenis faktur
+    count: (category) =>
+      run("readonly", (s) => (category === undefined ? s.count() : s.index("category").count(category))),
+    removeAll: (category) =>
+      run("readwrite", (s) => {
+        if (category === undefined) return s.clear();
+        const req = s.index("category").openKeyCursor(category);
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (!cursor) return;
+          s.delete(cursor.primaryKey);
+          cursor.continue();
+        };
+        return req;
+      }),
   };
 })();
 
@@ -1329,6 +1452,7 @@ async function loadHistory() {
   } catch (err) {
     console.error("Gagal memuat riwayat:", err);
     setStorageStatus(false);
+    el.clearHistory.classList.add("hidden");
     el.historyList.innerHTML = `<li class="empty muted small">
       ${icon("i-info")}<br />
       Riwayat tidak tersedia karena browser tidak mengizinkan penyimpanan
@@ -1337,6 +1461,7 @@ async function loadHistory() {
 }
 
 function renderHistory(data) {
+  el.clearHistory.classList.toggle("hidden", !data.length);
   if (!data.length) {
     el.historyList.innerHTML = `<li class="empty muted small">Belum ada file untuk jenis faktur ini.</li>`;
     return;
@@ -1400,6 +1525,30 @@ async function deleteHistory(id, title, when) {
   }
 }
 
+// Hapus seluruh riwayat jenis faktur yang sedang dipilih sekaligus;
+// riwayat jenis faktur lain ikut dihapus hanya jika dicentang.
+async function deleteAllHistory() {
+  const category = state.mode.category;
+  try {
+    const [own, all] = await Promise.all([historyDb.count(category), historyDb.count()]);
+    const others = all - own;
+    const ok = await confirmDialog(
+      "Hapus semua riwayat?",
+      `Semua ${own} file riwayat ${state.mode.title.replace("Faktur Pajak ", "")} akan dihapus permanen. ` +
+        "File yang sudah Anda unduh tidak terpengaruh.",
+      "Hapus semua",
+      others ? `Hapus juga riwayat jenis faktur lain (${others} file)` : null
+    );
+    if (!ok) return;
+    const everything = others > 0 && $("confirmCheck").checked;
+    await historyDb.removeAll(everything ? undefined : category);
+    toast(`${everything ? all : own} file dihapus dari riwayat.`, "success");
+    loadHistory();
+  } catch (_) {
+    toast("Gagal menghapus riwayat.", "error");
+  }
+}
+
 // =================================================================
 // EVENT
 // =================================================================
@@ -1446,6 +1595,18 @@ function bindEvents() {
   });
 
   el.convertButton.addEventListener("click", convert);
+  el.clearHistory.addEventListener("click", deleteAllHistory);
+
+  // Dialog akun retur: isian disalin ke kolom akun retur di langkah 3
+  $("returForm").addEventListener("submit", (e) => {
+    const value = $("returInput").value.trim();
+    if (!value) {
+      e.preventDefault();
+      return;
+    }
+    $(`acc-${state.mode.returAccount.key}`).value = value;
+    onAccountChange();
+  });
 
   $("helpButton").addEventListener("click", () => $("helpDialog").showModal());
   document.querySelectorAll("dialog [data-close]").forEach((b) =>

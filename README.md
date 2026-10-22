@@ -31,6 +31,19 @@ Format daftar faktur Keluaran/Masukan juga didukung:
 dan `Masa Pengkreditan` tidak dipakai. Format ini tidak punya kolom Masa Pajak, jadi bulan & tahun jurnal
 dipilih manual (terisi otomatis dari bulan terbanyak pada Tanggal Faktur).
 
+### Faktur retur (nilai minus)
+
+Baris dengan **DPP atau PPN bernilai minus** dianggap retur. Saat file seperti ini diunggah, aplikasi meminta
+nomor **Akun Retur Penjualan** (Keluaran A2) atau **Akun Retur Pembelian** (Masukan B1/B2/B3); file XML baru
+bisa dibuat setelah akun retur diisi. Jurnal retur memakai akun retur sebagai pengganti akun Penjualan/Pembelian,
+dan karena nilainya minus, sisi debit/kredit otomatis terbalik:
+
+| Jenis | Debit | Kredit |
+| --- | --- | --- |
+| Retur penjualan (A2) | Retur Penjualan (DPP), PPN Keluaran (PPN) | Piutang Usaha (DPP + PPN) |
+| Retur pembelian (B1/B2) | Hutang Usaha (DPP + PPN) | Retur Pembelian (DPP), PPN Masukan (PPN) |
+| Retur pembelian (B3) | Hutang Usaha | Retur Pembelian |
+
 ## Cara pakai
 
 1. Pilih jenis faktur.
@@ -40,7 +53,8 @@ dipilih manual (terisi otomatis dari bulan terbanyak pada Tanggal Faktur).
 5. Klik **Buat File XML**, unduh, lalu impor ke Accurate 5.
 
 > Riwayat hanya ada di browser tempat file dibuat dan akan hilang jika data browser dibersihkan.
-> Simpan file XML penting di folder Anda sendiri.
+> Simpan file XML penting di folder Anda sendiri. Tombol **Hapus semua** di kartu Riwayat menghapus seluruh
+> riwayat jenis faktur yang sedang dipilih (bisa dicentang untuk ikut menghapus riwayat jenis faktur lain).
 
 ## Deploy ke GitHub Pages (gratis)
 
