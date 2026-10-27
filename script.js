@@ -465,9 +465,10 @@ function extractRecord(mode, row) {
   return r;
 }
 
-// `key` = periode "YYMM", mis. jvNumber(mode, "2601", 1) -> "PENJ.26.01.001"
+// `key` = periode "YYMM", mis. jvNumber(mode, "2601", 1) -> "PENJ.2026.01.001"
 function jvNumber(mode, key, index) {
-  return `${mode.prefix}.${key.slice(0, 2)}.${key.slice(2)}.${String(index).padStart(3, "0")}`;
+  const yyyy = "20" + key.slice(0, 2);
+  return `${mode.prefix}.${yyyy}.${key.slice(2)}.${String(index).padStart(3, "0")}`;
 }
 
 // `jvs` = nomor jurnal per baris, sejajar dengan `records`
@@ -1034,7 +1035,7 @@ function renderColumnsHelp() {
       (huruf besar/kecil dan spasi tidak berpengaruh):</p>
     <table>${rows}
       <tr><td>Masa Pajak</td><td>${codes(PERIOD_COLUMNS)}
-        <div class="muted">Opsional — menentukan bulan &amp; tahun pada nomor jurnal, mis. Januari 2026 → .26.01.</div></td></tr>
+        <div class="muted">Opsional — menentukan bulan &amp; tahun pada nomor jurnal, mis. Januari 2026 → .2026.01.</div>
     </table>`;
 }
 
