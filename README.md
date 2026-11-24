@@ -1,11 +1,12 @@
 # Konverter Faktur Pajak → Accurate 5
 
-Mengubah file Excel faktur pajak (unduhan DJP/Coretax) menjadi file XML jurnal umum yang bisa diimpor ke **Accurate 5**.
+Mengubah file Excel faktur pajak dan lampiran SPT Masa PPh 21 (unduhan DJP/Coretax) menjadi file XML jurnal
+umum yang bisa diimpor ke **Accurate 5**.
 
 Aplikasi ini adalah **web statis**: tidak butuh server maupun database. Semua data diproses di browser pengguna
 dan tidak dikirim ke mana pun. Riwayat file XML tersimpan di browser masing-masing (IndexedDB).
 
-Jenis faktur yang didukung:
+Jenis data yang didukung:
 
 | Jenis | Untuk | Nomor jurnal |
 | --- | --- | --- |
@@ -13,6 +14,7 @@ Jenis faktur yang didukung:
 | Masukan B1 | Impor (PIB) | `PIB.YY.MM.001` |
 | Masukan B2 | Pembelian dalam negeri, PPN dikreditkan | `PEMB.YY.MM.001` |
 | Masukan B3 | Pembelian, PPN tidak dikreditkan | `PEMB.NON.YY.MM.001` |
+| PPh 21 Gaji Karyawan | Biaya gaji, hutang gaji & hutang PPh 21 (lampiran SPT Masa PPh 21) | `GAJI.YY.MM.001` |
 
 `YY.MM` diambil otomatis dari kolom **Masa Pajak** di Excel (mis. `Januari 2026` → `26.01`), nomor urut
 (`001`) diisi pengguna. Jika satu file berisi beberapa masa pajak, nomor urut dihitung terpisah per masa pajak.
@@ -44,9 +46,31 @@ dan karena nilainya minus, sisi debit/kredit otomatis terbalik:
 | Retur pembelian (B1/B2) | Hutang Usaha (DPP + PPN) | Retur Pembelian (DPP), PPN Masukan (PPN) |
 | Retur pembelian (B3) | Hutang Usaha | Retur Pembelian |
 
+### PPh 21 — biaya & hutang gaji
+
+Pilih **PPh 21 Gaji Karyawan**, lalu unggah lampiran SPT Masa PPh 21 dari Coretax. Setiap bukti potong menjadi
+satu jurnal:
+
+| Akun | Debit | Kredit |
+| --- | --- | --- |
+| Biaya Gaji | Penghasilan Bruto | |
+| Hutang PPh 21 | | PPh |
+| Hutang Gaji | | Penghasilan Bruto − PPh |
+
+- Kolom yang dibaca: `Nomor Bukti Potong`/`WithholdingNumber`, `Tanggal Bukti Potong`/`WithholdingDate`,
+  `Nama Penerima Penghasilan`, `Penghasilan Bruto`, `PPh`, serta `Masa Pajak` untuk `YY.MM` nomor jurnal.
+  `NPWP/NIK Penerima Penghasilan` dan `Kode Objek Pajak` boleh kosong.
+- **Semua sheet** yang memuat kolom tersebut dibaca sekaligus, mis. `Tabel 1A` (pegawai tetap) dan
+  `Lampiran 3 - BP21` (bukan pegawai, mis. tenaga ahli); keduanya memakai akun yang sama. Sheet lain
+  (`Info`, sheet berisi "Tidak ada data") dan baris `TOTAL` di akhir tabel diabaikan.
+- Baris Hutang PPh 21 hanya dibuat jika PPh-nya lebih dari 0 (penghasilan dengan tarif TER 0% cukup dua baris).
+- Tanggal jurnal = Tanggal Bukti Potong. Keterangan jurnal memakai sebutan sesuai Kode Objek Pajak:
+  `Gaji` (21-100-01), `Pensiun` (21-100-02), `Upah` (21-100-03), `Honorarium` (21-100-07), selain itu `Imbalan`,
+  mis. `Gaji BUDI SANTOSO - Januari 2026 - <nomor bukti potong>`.
+
 ## Cara pakai
 
-1. Pilih jenis faktur.
+1. Pilih jenis data (jenis faktur atau PPh 21).
 2. Isi nomor urut awal jurnal (bulan & tahun terisi otomatis dari Masa Pajak setelah file diunggah).
 3. Isi nomor akun sesuai daftar akun di database Accurate Anda (isian diingat otomatis).
 4. Unggah file Excel, periksa tabel pratinjau (baris yang dilewati ditandai beserta alasannya).
@@ -54,7 +78,7 @@ dan karena nilainya minus, sisi debit/kredit otomatis terbalik:
 
 > Riwayat hanya ada di browser tempat file dibuat dan akan hilang jika data browser dibersihkan.
 > Simpan file XML penting di folder Anda sendiri. Tombol **Hapus semua** di kartu Riwayat menghapus seluruh
-> riwayat jenis faktur yang sedang dipilih (bisa dicentang untuk ikut menghapus riwayat jenis faktur lain).
+> riwayat jenis data yang sedang dipilih (bisa dicentang untuk ikut menghapus riwayat jenis data lain).
 
 ## Deploy ke GitHub Pages (gratis)
 

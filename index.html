@@ -30,6 +30,7 @@
       <symbol id="i-buy" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 7L7 17m0 0h8m-8 0V9"/></symbol>
       <symbol id="i-ship" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 17l2 3h14l2-3M5 17V9h14v8M9 9V5h6v4"/></symbol>
       <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" d="M8 11V8a4 4 0 018 0v3"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M16 20v-1.5a3.5 3.5 0 00-3.5-3.5h-5A3.5 3.5 0 004 18.5V20M10 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM20 20v-1.5a3.5 3.5 0 00-2.5-3.35M15.5 4.15a3.5 3.5 0 010 6.7"/></symbol>
     </svg>
 
     <header class="topbar">
@@ -59,11 +60,11 @@
           <header class="step-head">
             <span class="step-num">1</span>
             <div>
-              <h2>Pilih jenis faktur</h2>
+              <h2>Pilih jenis data</h2>
               <p class="muted">Sesuaikan dengan file Excel yang akan Anda ubah.</p>
             </div>
           </header>
-          <div class="mode-grid" id="modeGrid" role="radiogroup" aria-label="Jenis faktur"></div>
+          <div class="mode-grid" id="modeGrid" role="radiogroup" aria-label="Jenis data"></div>
         </article>
 
         <!-- LANGKAH 2 -->
@@ -174,11 +175,11 @@
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Faktur</th>
+                    <th id="docHeader">Faktur</th>
                     <th id="partyHeader">Nama</th>
-                    <th class="num hide-sm">DPP</th>
-                    <th class="num hide-sm">PPN</th>
-                    <th class="num">Total</th>
+                    <th class="num hide-sm" id="baseHeader">DPP</th>
+                    <th class="num hide-sm" id="taxHeader">PPN</th>
+                    <th class="num" id="totalHeader">Total</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -231,7 +232,7 @@
             <div class="history-tools">
               <span class="muted small" id="historyModeLabel"></span>
               <button class="btn btn-ghost btn-sm danger hidden" id="clearHistory" type="button"
-                title="Hapus semua riwayat jenis faktur ini">
+                title="Hapus semua riwayat jenis data ini">
                 <svg class="icon"><use href="#i-trash" /></svg><span>Hapus semua</span>
               </button>
             </div>
@@ -259,9 +260,10 @@
       <div class="modal-body">
         <ol class="howto">
           <li>
-            <strong>Pilih jenis faktur.</strong> <em>Keluaran A2</em> untuk penjualan Anda. <em>Masukan</em>
+            <strong>Pilih jenis data.</strong> <em>Keluaran A2</em> untuk penjualan Anda. <em>Masukan</em>
             untuk pembelian: B1 (impor/PIB), B2 (pembelian dalam negeri, PPN dikreditkan), B3 (PPN tidak
-            dikreditkan).
+            dikreditkan). <em>PPh 21 Gaji Karyawan</em> untuk lampiran SPT Masa PPh 21: setiap bukti potong
+            menjadi jurnal biaya gaji, hutang PPh 21, dan hutang gaji (<code>GAJI.26.01.001</code>).
           </li>
           <li>
             <strong>Tentukan nomor urut.</strong> Bulan &amp; tahun jurnal diambil otomatis dari kolom
@@ -289,6 +291,8 @@
           <dt>Riwayat</dt><dd>File XML yang pernah dibuat disimpan di browser ini saja. Di komputer atau browser lain riwayatnya berbeda, dan akan hilang jika data/cache browser dihapus. Simpan file XML penting di folder Anda.</dd>
           <dt>Dilewati</dt><dd>Baris yang datanya tidak lengkap (mis. NPWP atau nomor faktur kosong) sehingga tidak dibuatkan jurnal.</dd>
           <dt>Retur</dt><dd>Faktur dengan DPP/PPN bernilai minus. Jurnalnya dibalik (debit ↔ kredit) dan memakai Akun Retur Penjualan/Pembelian yang Anda isi sebagai pengganti Akun Penjualan/Pembelian.</dd>
+          <dt>Bukti potong</dt><dd>Bukti pemotongan PPh 21 satu penerima untuk satu masa pajak. Semua sheet lampiran PPh 21 yang berisi data (mis. Tabel 1A dan Lampiran 3 - BP21) ikut dibaca.</dd>
+          <dt>Bruto / Neto</dt><dd>Penghasilan bruto = gaji &amp; tunjangan sebelum dipotong PPh 21, dicatat sebagai Biaya Gaji. Neto = bruto − PPh 21, yaitu gaji yang dibayarkan, dicatat sebagai Hutang Gaji.</dd>
         </dl>
       </div>
     </dialog>

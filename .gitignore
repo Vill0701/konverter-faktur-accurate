@@ -1,4 +1,7 @@
 # Data riwayat lama dari versi server (berisi data pajak) — jangan diunggah
 database_faktur.db
 *.db
+# File Excel faktur/PPh 21 (berisi data pajak & gaji karyawan) — jangan diunggah
+*.xlsx
+*.xls
 node_modules/

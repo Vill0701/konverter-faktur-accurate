@@ -234,6 +234,10 @@ code {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+/* Kartu terakhir yang sendirian di barisnya (PPh 21) dibuat selebar grid */
+.mode-grid > .mode-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
 .mode-card {
   text-align: left;
   font: inherit;
