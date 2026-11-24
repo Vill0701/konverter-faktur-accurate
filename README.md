@@ -10,13 +10,13 @@ Jenis data yang didukung:
 
 | Jenis | Untuk | Nomor jurnal |
 | --- | --- | --- |
-| Keluaran A2 | Penjualan | `PENJ.YY.MM.001` |
-| Masukan B1 | Impor (PIB) | `PIB.YY.MM.001` |
-| Masukan B2 | Pembelian dalam negeri, PPN dikreditkan | `PEMB.YY.MM.001` |
-| Masukan B3 | Pembelian, PPN tidak dikreditkan | `PEMB.NON.YY.MM.001` |
-| PPh 21 Gaji Karyawan | Biaya gaji, hutang gaji & hutang PPh 21 (lampiran SPT Masa PPh 21) | `GAJI.YY.MM.001` |
+| Keluaran A2 | Penjualan | `PENJ.YYYY.MM.001` |
+| Masukan B1 | Impor (PIB) | `PIB.YYYY.MM.001` |
+| Masukan B2 | Pembelian dalam negeri, PPN dikreditkan | `PEMB.YYYY.MM.001` |
+| Masukan B3 | Pembelian, PPN tidak dikreditkan | `PEMB.NON.YYYY.MM.001` |
+| PPh 21 Gaji Karyawan | Biaya gaji, hutang gaji & hutang PPh 21 (lampiran SPT Masa PPh 21) | `GAJI.YYYY.MM.001` |
 
-`YY.MM` diambil otomatis dari kolom **Masa Pajak** di Excel (mis. `Januari 2026` → `26.01`), nomor urut
+`YYYY.MM` diambil otomatis dari kolom **Masa Pajak** di Excel (mis. `Januari 2026` → `2026.01`), nomor urut
 (`001`) diisi pengguna. Jika satu file berisi beberapa masa pajak, nomor urut dihitung terpisah per masa pajak.
 File tanpa kolom Masa Pajak tetap bisa dipakai dengan memilih bulan & tahun secara manual.
 
@@ -58,7 +58,7 @@ satu jurnal:
 | Hutang Gaji | | Penghasilan Bruto − PPh |
 
 - Kolom yang dibaca: `Nomor Bukti Potong`/`WithholdingNumber`, `Tanggal Bukti Potong`/`WithholdingDate`,
-  `Nama Penerima Penghasilan`, `Penghasilan Bruto`, `PPh`, serta `Masa Pajak` untuk `YY.MM` nomor jurnal.
+  `Nama Penerima Penghasilan`, `Penghasilan Bruto`, `PPh`, serta `Masa Pajak` untuk `YYYY.MM` nomor jurnal.
   `NPWP/NIK Penerima Penghasilan` dan `Kode Objek Pajak` boleh kosong.
 - **Semua sheet** yang memuat kolom tersebut dibaca sekaligus, mis. `Tabel 1A` (pegawai tetap) dan
   `Lampiran 3 - BP21` (bukan pegawai, mis. tenaga ahli); keduanya memakai akun yang sama. Sheet lain

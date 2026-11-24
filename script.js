@@ -1250,7 +1250,7 @@ function renderColumnsHelp() {
       (huruf besar/kecil dan spasi tidak berpengaruh):</p>
     <table>${rows}
       <tr><td>Masa Pajak</td><td>${codes(PERIOD_COLUMNS)}
-        <div class="muted">Opsional — menentukan bulan &amp; tahun pada nomor jurnal, mis. Januari 2026 → .2026.01.</div>
+        <div class="muted">Opsional — menentukan bulan &amp; tahun pada nomor jurnal, mis. Januari 2026 → .2026.01.</div></td></tr>
     </table>
     ${mode.columnsNote ? `<p class="muted">${mode.columnsNote}</p>` : ""}`;
 }
