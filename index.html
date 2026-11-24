@@ -79,6 +79,15 @@
               </p>
             </div>
           </header>
+          <!-- Digit tahun di nomor jurnal, berlaku untuk semua jenis data -->
+          <div class="year-format">
+            <span class="year-format-label" id="yearDigitsLabel">Penulisan tahun</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="yearDigitsLabel" id="yearDigits">
+              <button type="button" role="radio" data-digits="4">4 digit <code>2026</code></button>
+              <button type="button" role="radio" data-digits="2">2 digit <code>26</code></button>
+            </div>
+            <span class="muted small">Ikuti format nomor jurnal di Accurate Anda. Berlaku untuk semua jenis data.</span>
+          </div>
           <!-- Tanpa kolom Masa Pajak: bulan & tahun dipilih manual -->
           <div id="periodManual">
             <div class="field-grid three">
@@ -267,7 +276,8 @@
           </li>
           <li>
             <strong>Tentukan nomor urut.</strong> Bulan &amp; tahun jurnal diambil otomatis dari kolom
-            <em>Masa Pajak</em>, misalnya Masa Pajak Januari 2026 menjadi <code>PENJ.2026.01.001</code>. Anda cukup
+            <em>Masa Pajak</em>, misalnya Masa Pajak Januari 2026 menjadi <code>PENJ.2026.01.001</code>, atau
+            <code>PENJ.26.01.001</code> jika <em>Penulisan tahun</em> diatur ke 2 digit. Anda cukup
             mengisi nomor urut awal. Jika sebelumnya sudah ada jurnal di bulan yang sama, lanjutkan nomornya agar
             tidak bentrok. File tanpa kolom Masa Pajak tetap bisa dipakai dengan memilih bulan &amp; tahun sendiri.
           </li>

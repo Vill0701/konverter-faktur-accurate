@@ -649,10 +649,11 @@ function extractWithholding(mode, row, autoPeriod) {
   return r;
 }
 
-// `key` = periode "YYMM", mis. jvNumber(mode, "2601", 1) -> "PENJ.2026.01.001"
+// `key` = periode "YYMM"; tahun ditulis 4 atau 2 digit sesuai pilihan di
+// langkah 2, mis. jvNumber(mode, "2601", 1) -> "PENJ.2026.01.001" / "PENJ.26.01.001"
 function jvNumber(mode, key, index) {
-  const yyyy = "20" + key.slice(0, 2);
-  return `${mode.prefix}.${yyyy}.${key.slice(2)}.${String(index).padStart(3, "0")}`;
+  const year = state.yearDigits === 2 ? key.slice(0, 2) : "20" + key.slice(0, 2);
+  return `${mode.prefix}.${year}.${key.slice(2)}.${String(index).padStart(3, "0")}`;
 }
 
 // `jvs` = nomor jurnal per baris, sejajar dengan `records`
@@ -718,6 +719,7 @@ const el = {
   modeGrid: $("modeGrid"),
   month: $("journalMonth"),
   year: $("journalYear"),
+  yearDigits: $("yearDigits"),
   startIndex: $("startIndex"),
   jvPreview: $("jvPreview"),
   continueIndex: $("continueIndex"),
@@ -775,6 +777,9 @@ const state = {
   autoPeriod: false,
   // nomor urut awal per periode "YYMM" yang diisi user (mode Masa Pajak)
   starts: {},
+  // digit tahun di nomor jurnal: 4 (PENJ.2026.01.001) atau 2 (PENJ.26.01.001);
+  // berlaku untuk semua jenis data dan diingat di browser
+  yearDigits: 4,
   storageOk: null,
   downloadUrl: null,
 };
@@ -1021,6 +1026,17 @@ function renderPeriod() {
     updateAll();
   });
 
+  // Digit tahun di nomor jurnal (2 atau 4), diingat untuk kunjungan berikutnya
+  state.yearDigits = load("yearDigits", 4) === 2 ? 2 : 4;
+  el.yearDigits.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-digits]");
+    if (!b || Number(b.dataset.digits) === state.yearDigits) return;
+    state.yearDigits = Number(b.dataset.digits);
+    store("yearDigits", state.yearDigits);
+    hideResult();
+    updateAll();
+  });
+
   el.periodList.addEventListener("input", (e) => {
     const input = e.target.closest("[data-start]");
     if (!input) return;
@@ -1059,6 +1075,11 @@ function renderPeriods(groups) {
   const auto = state.autoPeriod;
   el.periodManual.classList.toggle("hidden", auto);
   el.periodAuto.classList.toggle("hidden", !auto);
+  el.yearDigits.querySelectorAll("[data-digits]").forEach((b) => {
+    const on = Number(b.dataset.digits) === state.yearDigits;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", String(on));
+  });
 
   if (!auto) {
     const key = manualPeriodKey();
@@ -1250,7 +1271,7 @@ function renderColumnsHelp() {
       (huruf besar/kecil dan spasi tidak berpengaruh):</p>
     <table>${rows}
       <tr><td>Masa Pajak</td><td>${codes(PERIOD_COLUMNS)}
-        <div class="muted">Opsional — menentukan bulan &amp; tahun pada nomor jurnal, mis. Januari 2026 → .2026.01.</div></td></tr>
+        <div class="muted">Opsional — menentukan bulan &amp; tahun pada nomor jurnal, mis. Januari 2026 → .2026.01. atau .26.01.</div></td></tr>
     </table>
     ${mode.columnsNote ? `<p class="muted">${mode.columnsNote}</p>` : ""}`;
 }

@@ -349,6 +349,26 @@ input:disabled {
   cursor: not-allowed;
 }
 
+/* Pilihan digit tahun di nomor jurnal (langkah 2) */
+.year-format {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+.year-format-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.year-format .segmented code {
+  margin-left: 4px;
+  font-weight: 700;
+}
+.year-format .segmented button.active code {
+  color: var(--primary);
+}
+
 .jv-preview {
   margin-top: 16px;
   padding: 12px 14px;

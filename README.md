@@ -20,6 +20,10 @@ Jenis data yang didukung:
 (`001`) diisi pengguna. Jika satu file berisi beberapa masa pajak, nomor urut dihitung terpisah per masa pajak.
 File tanpa kolom Masa Pajak tetap bisa dipakai dengan memilih bulan & tahun secara manual.
 
+Tahun bisa ditulis **4 digit** (`PENJ.2026.01.001`, bawaan) atau **2 digit** (`PENJ.26.01.001`) lewat pilihan
+**Penulisan tahun** di langkah 2, sesuai format nomor jurnal di database Accurate masing-masing. Pilihan ini
+berlaku untuk semua jenis data dan diingat browser.
+
 Kolom Excel yang dibaca mengikuti lampiran SPT Masa PPN Coretax (A2, B1, B2, B3):
 `Masa Pajak`, `Nomor Faktur/Dokumen`, `Tanggal Faktur/Dokumen`, `NPWP/NIK Pembeli` atau `NPWP/NIK Penjual`,
 `Nama Pembeli` atau `Nama Penjual`, `Harga Jual / Penggantian / DPP`, dan `PPN`. Nama kolom format lama
@@ -71,7 +75,8 @@ satu jurnal:
 ## Cara pakai
 
 1. Pilih jenis data (jenis faktur atau PPh 21).
-2. Isi nomor urut awal jurnal (bulan & tahun terisi otomatis dari Masa Pajak setelah file diunggah).
+2. Pilih penulisan tahun (4 atau 2 digit) dan isi nomor urut awal jurnal (bulan & tahun terisi otomatis dari
+   Masa Pajak setelah file diunggah).
 3. Isi nomor akun sesuai daftar akun di database Accurate Anda (isian diingat otomatis).
 4. Unggah file Excel, periksa tabel pratinjau (baris yang dilewati ditandai beserta alasannya).
 5. Klik **Buat File XML**, unduh, lalu impor ke Accurate 5.
